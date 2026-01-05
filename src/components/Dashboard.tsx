@@ -3,13 +3,16 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { Button } from '@/components/ui/button';
-import { Play, MicOff, RefreshCw, Bot, Square, Radio } from 'lucide-react';
+import { Play, MicOff, RefreshCw, Bot, Square, Radio, Settings } from 'lucide-react';
 import { useGeminiSession, ThoughtLog } from '@/hooks/useGeminiSession';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { StatusIndicator } from '@/components/status-indicator';
 import { SkeletonOverlay } from '@/components/skeleton-overlay';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 
 const AgentLog = ({ logs, error, isConnected }: { logs: ThoughtLog[], error: string | null, isConnected: boolean }) => {
 
@@ -41,6 +44,7 @@ export default function Dashboard() {
     const webcamRef = useRef<Webcam>(null);
     const [isSessionActive, setIsSessionActive] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
+    const [frameInterval, setFrameInterval] = useState(4); // Default to 4 seconds
     
     const { isConnected, thoughtLogs, error, sendFrame, latestStatus, isProcessing } = useGeminiSession();
 
@@ -57,10 +61,10 @@ export default function Dashboard() {
                     const base64Image = imageSrc.split(',')[1];
                     sendFrame(base64Image);
                 }
-            }, 4000); // Send a frame every 4 seconds
+            }, frameInterval * 1000); // Use the state for interval
         }
         return () => clearInterval(interval);
-    }, [isSessionActive, isConnected, sendFrame]);
+    }, [isSessionActive, isConnected, sendFrame, frameInterval]);
 
     const switchCamera = useCallback(() => {
         setFacingMode(
@@ -139,6 +143,43 @@ export default function Dashboard() {
                     >
                         <RefreshCw />
                     </Button>
+
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="rounded-full w-12 h-12 border-2 bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700 transition-all duration-300"
+                            >
+                                <Settings />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 bg-slate-800 border-slate-700 text-slate-200">
+                            <div className="grid gap-4">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium leading-none">Settings</h4>
+                                    <p className="text-sm text-slate-400">
+                                        Adjust session parameters.
+                                    </p>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="frame-interval">Frame Interval ({frameInterval}s)</Label>
+                                    <Slider
+                                        id="frame-interval"
+                                        min={1}
+                                        max={10}
+                                        step={1}
+                                        value={[frameInterval]}
+                                        onValueChange={(value) => setFrameInterval(value[0])}
+                                    />
+                                    <p className="text-xs text-slate-500">
+                                        Lower values send data more often but use more API quota.
+                                    </p>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+
                 </div>
             </div>
 
