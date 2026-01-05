@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import { Button } from '@/components/ui/button';
-import { Play, MicOff, CameraReverse, Bot, Square } from 'lucide-react';
+import { Play, MicOff, RefreshCw, Bot, Square } from 'lucide-react';
 
 const AgentLog = () => {
     const [logs, setLogs] = useState(['AGENT: Standby...', 'AGENT: System Initialized.']);
@@ -98,7 +98,7 @@ export default function Dashboard() {
                         size="icon"
                         className="rounded-full w-12 h-12 border-2 bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700 transition-all duration-300"
                     >
-                        <CameraReverse />
+                        <RefreshCw />
                     </Button>
                 </div>
             </div>
