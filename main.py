@@ -22,7 +22,9 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 
 # --- AI Model Setup ---
-MODEL_NAME = "gemini-1.5-pro-latest"
+ANALYSIS_MODEL_NAME = "gemini-1.5-pro-latest"
+TTS_MODEL_NAME = "models/text-to-speech"
+
 
 # The system instruction for the AI model
 SYSTEM_INSTRUCTION = """
@@ -70,12 +72,14 @@ safety_settings = [
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
 ]
 
-model = genai.GenerativeModel(
-    model_name=MODEL_NAME,
+analysis_model = genai.GenerativeModel(
+    model_name=ANALYSIS_MODEL_NAME,
     safety_settings=safety_settings,
     generation_config=generation_config,
     system_instruction=SYSTEM_INSTRUCTION,
 )
+
+tts_model = genai.GenerativeModel(TTS_MODEL_NAME)
 
 # --- FastAPI App ---
 app = FastAPI()
@@ -95,6 +99,27 @@ def read_root():
     return {"status": "Kinetix AI Backend is running"}
 
 
+async def text_to_speech(text):
+    """Converts text to speech and returns the audio data as base64."""
+    try:
+        print(f"Generating audio for: '{text}'")
+        response = await tts_model.generate_content_async(
+            f"Please say '{text}' in a clear and encouraging tone.",
+            stream=False
+        )
+        # The API returns audio data directly. We need to find it in the response parts.
+        audio_part = next((part for part in response.parts if part.mime_type.startswith("audio/")), None)
+        if audio_part:
+            print("Audio generated successfully.")
+            return base64.b64encode(audio_part.data).decode('utf-8')
+        else:
+            print("TTS response did not contain audio data.")
+            return None
+    except Exception as e:
+        print(f"Error during text-to-speech generation: {e}")
+        return None
+
+
 @app.websocket("/ws/session")
 async def websocket_session(websocket: WebSocket):
     """
@@ -103,7 +128,7 @@ async def websocket_session(websocket: WebSocket):
     await websocket.accept()
     print("WebSocket connection accepted.")
 
-    chat_session = model.start_chat(history=[])
+    chat_session = analysis_model.start_chat(history=[])
 
     try:
         while True:
@@ -127,7 +152,7 @@ async def websocket_session(websocket: WebSocket):
 
             try:
                 print("Sending frame to Gemini...")
-                response = chat_session.send_message(image, stream=False)
+                response = await chat_session.send_message_async(image, stream=False)
                 response_text = response.text
                 print(f"Received from Gemini: {response_text}")
 
@@ -143,7 +168,12 @@ async def websocket_session(websocket: WebSocket):
                 if status:
                     await websocket.send_json({"type": "STATUS", "data": status})
 
-                # TODO: Implement text-to-speech for 'speech_text' and stream audio
+                # Generate and send speech
+                speech_text = analysis_data.get("speech_text")
+                if speech_text:
+                    audio_base64 = await text_to_speech(speech_text)
+                    if audio_base64:
+                        await websocket.send_json({"type": "SPEECH", "data": audio_base64})
 
             except (json.JSONDecodeError, KeyError) as e:
                 print(f"Error parsing Gemini response: {e}")
@@ -167,3 +197,5 @@ async def websocket_session(websocket: WebSocket):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
+
+    

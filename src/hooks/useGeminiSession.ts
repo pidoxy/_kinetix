@@ -47,11 +47,11 @@ export function useGeminiSession() {
 
         socket.onmessage = async (event) => {
             if (typeof event.data === 'string') {
-                setIsProcessing(false);
                 try {
                     const message = JSON.parse(event.data);
                     
                     if (message.type === 'THOUGHT' && message.data) {
+                        setIsProcessing(false); // Stop processing indicator when thought arrives
                         setThoughtLogs((prevLogs) => [...prevLogs, { timestamp: Date.now(), text: message.data }]);
                     }
                     
@@ -65,6 +65,7 @@ export function useGeminiSession() {
                     }
                     
                     if (message.type === 'SPEECH' && message.data) {
+                        // Decode base64 audio and queue it for playback
                         const audioData = atob(message.data);
                         const audioBytes = new Uint8Array(audioData.length);
                         for (let i = 0; i < audioData.length; i++) {
@@ -75,6 +76,7 @@ export function useGeminiSession() {
                     }
 
                 } catch (e) {
+                    setIsProcessing(false);
                     console.error('Error parsing JSON message:', e);
                     setThoughtLogs((prev) => [...prev, { timestamp: Date.now(), text: `ERROR: Invalid message from server.`}]);
                 }
@@ -110,11 +112,10 @@ export function useGeminiSession() {
 
         if (audioData) {
             try {
-                // Check if context is suspended and resume it
+                // The backend now sends MP3 data, which is what decodeAudioData expects.
                 if (audioContext.current.state === 'suspended') {
                     await audioContext.current.resume();
                 }
-
                 const audioBuffer = await audioContext.current.decodeAudioData(audioData);
                 const source = audioContext.current.createBufferSource();
                 source.buffer = audioBuffer;
@@ -129,7 +130,8 @@ export function useGeminiSession() {
                 console.error("Error decoding or playing audio:", e);
                 setError("Failed to play audio feedback.");
                 isPlaying.current = false;
-                playAudioFromQueue();
+                // Try to play the next item even if this one fails
+                playAudioFromQueue(); 
             }
         } else {
             isPlaying.current = false;
@@ -148,3 +150,5 @@ export function useGeminiSession() {
 
     return { isConnected, thoughtLogs, error, sendFrame, latestStatus, isProcessing };
 }
+
+    
