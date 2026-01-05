@@ -3,16 +3,18 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { Button } from '@/components/ui/button';
-import { Play, MicOff, RefreshCw, Bot, Square } from 'lucide-react';
+import { Play, MicOff, RefreshCw, Bot, Square, Radio } from 'lucide-react';
 import { useGeminiSession, ThoughtLog } from '@/hooks/useGeminiSession';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { StatusIndicator } from '@/components/status-indicator';
 import { SkeletonOverlay } from '@/components/skeleton-overlay';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const AgentLog = ({ logs, error, isConnected }: { logs: ThoughtLog[], error: string | null, isConnected: boolean }) => {
 
     return (
-        <div className="w-1/4 h-screen bg-black/50 backdrop-blur-md border-l-2 border-cyan-500/30 p-4 flex flex-col">
+        <div className="w-1/4 h-screen bg-black/80 backdrop-blur-md border-l-2 border-cyan-500/30 p-4 flex flex-col">
             <div className="flex items-center gap-2 mb-4">
                 <Bot className="text-cyan-400" />
                 <h2 className="text-lg font-bold text-cyan-400 tracking-wider">Agent Log</h2>
@@ -89,6 +91,17 @@ export default function Dashboard() {
                     className="absolute inset-0 w-full h-full object-cover"
                 />
                 {isSessionActive && <SkeletonOverlay />}
+                
+                <div className='absolute top-6 left-6 z-20'>
+                    <Badge variant={isSessionActive ? "destructive" : "secondary"} className={cn(
+                        "text-lg transition-all duration-300",
+                        isSessionActive && "animate-pulse"
+                    )}>
+                        <Radio className={cn("mr-2 h-4 w-4", isSessionActive && "text-red-400")} />
+                        {isSessionActive ? "LIVE" : "IDLE"}
+                    </Badge>
+                </div>
+
                 {isSessionActive && <StatusIndicator status={latestStatus} isProcessing={isProcessing} />}
 
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">

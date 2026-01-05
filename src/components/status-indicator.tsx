@@ -9,37 +9,33 @@ type StatusIndicatorProps = {
 };
 
 export function StatusIndicator({ status, isProcessing }: StatusIndicatorProps) {
+    if (status === 'idle') return null;
+
   const statusConfig = {
-    idle: {
-      bgColor: "bg-muted",
-      borderColor: "border-muted-foreground/50",
-      text: "IDLE",
-      textColor: "text-muted-foreground",
-    },
     good: {
       bgColor: "bg-green-500/80",
       borderColor: "border-green-300/80",
-      text: "GOOD",
+      text: "GOOD FORM",
       textColor: "text-white",
     },
     bad: {
       bgColor: "bg-red-500/80",
       borderColor: "border-red-300/80",
-      text: "STOP",
+      text: "CORRECT FORM",
       textColor: "text-white",
     },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status as 'good' | 'bad'];
   const isBad = status === 'bad';
 
   return (
     <div className="absolute top-6 right-6 z-20 flex items-center gap-3">
-        {isProcessing && status !== 'idle' && <Loader className="w-8 h-8 text-cyan-400 animate-spin" />}
+        {isProcessing && <Loader className="w-8 h-8 text-cyan-400 animate-spin" />}
         <div
             className={cn(
-                "relative flex items-center justify-center w-24 h-24 rounded-full border-4 shadow-2xl transition-all duration-300",
-                "backdrop-blur-sm",
+                "relative flex items-center justify-center min-w-[150px] h-24 rounded-full border-4 shadow-2xl transition-all duration-300",
+                "backdrop-blur-sm px-6",
                 config.borderColor,
                 config.bgColor,
                 isBad && "animate-pulse"
@@ -49,7 +45,7 @@ export function StatusIndicator({ status, isProcessing }: StatusIndicatorProps) 
                 className={cn(
                 "font-bold text-lg tracking-wider",
                 config.textColor,
-                isBad && "animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"
+                isBad && "animate-ping-slow absolute inline-flex h-3/4 w-3/4 rounded-full bg-red-400 opacity-75"
                 )}
             ></span>
             <span
