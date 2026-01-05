@@ -22,8 +22,6 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 
 # --- AI Model Setup ---
-# Note: 'gemini-2.0-flash-exp' is an experimental model. If you encounter issues,
-# consider using a stable alternative like 'gemini-1.5-flash-latest'.
 MODEL_NAME = "gemini-1.5-flash-latest"
 
 # The system instruction for the AI model
@@ -54,10 +52,11 @@ Example for poor form:
 
 Analyze each frame independently and provide immediate, relevant feedback.
 Do not include markdown formatting (```json ... ```) in your response.
+Your entire response must be a single, valid JSON object.
 """
 
 generation_config = {
-    "temperature": 0.1,
+    "temperature": 0.2,
     "top_p": 0.95,
     "top_k": 64,
     "max_output_tokens": 8192,
@@ -104,14 +103,10 @@ async def websocket_session(websocket: WebSocket):
     await websocket.accept()
     print("WebSocket connection accepted.")
 
-    # Start a new chat session with the generative model
-    chat_session = model.start_chat(
-        history=[]
-    )
+    chat_session = model.start_chat(history=[])
 
     try:
         while True:
-            # Receive JSON message from the client
             message_json = await websocket.receive_json()
             message_type = message_json.get("type")
             
@@ -122,8 +117,7 @@ async def websocket_session(websocket: WebSocket):
             base64_image = message_json.get("data")
             if not base64_image:
                 continue
-
-            # Decode the base64 image
+            
             try:
                 image_bytes = base64.b64decode(base64_image)
                 image = Image.open(io.BytesIO(image_bytes))
@@ -131,28 +125,33 @@ async def websocket_session(websocket: WebSocket):
                 print(f"Error decoding image: {e}")
                 continue
 
-            # Send image to the model and get the response
             try:
                 print("Sending frame to Gemini...")
                 response = chat_session.send_message(image, stream=False)
                 response_text = response.text
                 print(f"Received from Gemini: {response_text}")
 
-                # Parse the JSON response from the model
                 analysis_data = json.loads(response_text)
                 
-                # Send Thought Signature to client
-                thought_signature = analysis_data.get("thought_signature", "...")
-                await websocket.send_json({"type": "THOUGHT", "data": thought_signature})
+                # Send Thought Signature
+                thought = analysis_data.get("thought_signature")
+                if thought:
+                    await websocket.send_json({"type": "THOUGHT", "data": thought})
+
+                # Send Status
+                status = analysis_data.get("status")
+                if status:
+                    await websocket.send_json({"type": "STATUS", "data": status})
 
                 # TODO: Implement text-to-speech for 'speech_text' and stream audio
-                # For now, we are not sending audio back.
 
             except (json.JSONDecodeError, KeyError) as e:
                 print(f"Error parsing Gemini response: {e}")
                 print(f"Raw response was: {response_text}")
+                await websocket.send_json({"type": "ERROR", "data": "Error processing AI response."})
             except Exception as e:
                 print(f"An unexpected error occurred during model communication: {e}")
+                await websocket.send_json({"type": "ERROR", "data": f"Model communication error: {e}"})
 
 
     except WebSocketDisconnect:
@@ -161,12 +160,10 @@ async def websocket_session(websocket: WebSocket):
         print(f"An unexpected error occurred in the WebSocket session: {e}")
     finally:
         print("Closing WebSocket connection.")
-        await websocket.close()
+        if not websocket.client_state == 'DISCONNECTED':
+            await websocket.close()
 
 
 if __name__ == "__main__":
     import uvicorn
-    # To run this app: uvicorn main:app --host 0.0.0.0 --port 8080 --reload
     uvicorn.run(app, host="0.0.0.0", port=8080)
-
-    

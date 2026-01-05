@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Play, MicOff, RefreshCw, Bot, Square } from 'lucide-react';
 import { useGeminiSession, ThoughtLog } from '@/hooks/useGeminiSession';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { StatusIndicator } from '@/components/status-indicator';
+import { SkeletonOverlay } from '@/components/skeleton-overlay';
 
 const AgentLog = ({ logs, error, isConnected }: { logs: ThoughtLog[], error: string | null, isConnected: boolean }) => {
 
@@ -26,6 +28,7 @@ const AgentLog = ({ logs, error, isConnected }: { logs: ThoughtLog[], error: str
                 {logs.map((log, index) => (
                     <p key={index} className="animate-fade-in">{`> ${log.text}`}</p>
                 ))}
+                 <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
             </div>
         </div>
     );
@@ -34,11 +37,10 @@ const AgentLog = ({ logs, error, isConnected }: { logs: ThoughtLog[], error: str
 
 export default function Dashboard() {
     const webcamRef = useRef<Webcam>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isSessionActive, setIsSessionActive] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
     
-    const { isConnected, thoughtLogs, error, sendFrame } = useGeminiSession();
+    const { isConnected, thoughtLogs, error, sendFrame, latestStatus, isProcessing } = useGeminiSession();
 
     const FACING_MODE_USER = "user";
     const FACING_MODE_ENVIRONMENT = "environment";
@@ -50,11 +52,10 @@ export default function Dashboard() {
             interval = setInterval(() => {
                 const imageSrc = webcamRef.current?.getScreenshot();
                 if (imageSrc) {
-                    // Remove the data URI prefix before sending
                     const base64Image = imageSrc.split(',')[1];
                     sendFrame(base64Image);
                 }
-            }, 500); // Send a frame every 500ms
+            }, 1000); // Send a frame every second
         }
         return () => clearInterval(interval);
     }, [isSessionActive, isConnected, sendFrame]);
@@ -87,10 +88,8 @@ export default function Dashboard() {
                     videoConstraints={{ facingMode }}
                     className="absolute inset-0 w-full h-full object-cover"
                 />
-                <canvas
-                    ref={canvasRef}
-                    className="absolute inset-0 w-full h-full bg-transparent"
-                />
+                {isSessionActive && <SkeletonOverlay />}
+                {isSessionActive && <StatusIndicator status={latestStatus} isProcessing={isProcessing} />}
 
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
                     <Button
@@ -112,7 +111,7 @@ export default function Dashboard() {
                         variant="outline"
                         size="icon"
                         className={`rounded-full w-12 h-12 border-2 transition-all duration-300
-                            ${isMuted
+                            ${!isMuted
                                 ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400 hover:bg-yellow-500/40'
                                 : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700'
                             }`}

@@ -17,14 +17,14 @@ export function StatusIndicator({ status, isProcessing }: StatusIndicatorProps) 
       textColor: "text-muted-foreground",
     },
     good: {
-      bgColor: "bg-green-500",
-      borderColor: "border-green-300",
-      text: "GOOD FORM",
+      bgColor: "bg-green-500/80",
+      borderColor: "border-green-300/80",
+      text: "GOOD",
       textColor: "text-white",
     },
     bad: {
-      bgColor: "bg-red-500",
-      borderColor: "border-red-300",
+      bgColor: "bg-red-500/80",
+      borderColor: "border-red-300/80",
       text: "STOP",
       textColor: "text-white",
     },
@@ -34,11 +34,12 @@ export function StatusIndicator({ status, isProcessing }: StatusIndicatorProps) 
   const isBad = status === 'bad';
 
   return (
-    <div className="absolute top-6 right-6 z-10 flex items-center gap-3">
-        {isProcessing && status !== 'idle' && <Loader className="w-8 h-8 text-accent animate-spin" />}
+    <div className="absolute top-6 right-6 z-20 flex items-center gap-3">
+        {isProcessing && status !== 'idle' && <Loader className="w-8 h-8 text-cyan-400 animate-spin" />}
         <div
             className={cn(
                 "relative flex items-center justify-center w-24 h-24 rounded-full border-4 shadow-2xl transition-all duration-300",
+                "backdrop-blur-sm",
                 config.borderColor,
                 config.bgColor,
                 isBad && "animate-pulse"
@@ -61,12 +62,3 @@ export function StatusIndicator({ status, isProcessing }: StatusIndicatorProps) 
     </div>
   );
 }
-
-declare module 'tailwindcss/types/config' {
-  interface AnimateConfig {
-    'ping-slow': string;
-  }
-}
-
-// You might need to add this to your tailwind.config.ts if it's not already there under theme.extend.animation
-// animation: { 'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite' }
