@@ -22,7 +22,7 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 
 # --- AI Model Setup ---
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gemini-1.5-pro-latest"
 
 # The system instruction for the AI model
 SYSTEM_INSTRUCTION = """
