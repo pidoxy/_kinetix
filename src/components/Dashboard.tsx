@@ -55,7 +55,7 @@ export default function Dashboard() {
                     const base64Image = imageSrc.split(',')[1];
                     sendFrame(base64Image);
                 }
-            }, 1000); // Send a frame every second
+            }, 4000); // Send a frame every 4 seconds
         }
         return () => clearInterval(interval);
     }, [isSessionActive, isConnected, sendFrame]);
