@@ -1,22 +1,30 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { Button } from '@/components/ui/button';
 import { Play, MicOff, RefreshCw, Bot, Square } from 'lucide-react';
+import { useGeminiSession, ThoughtLog } from '@/hooks/useGeminiSession';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const AgentLog = () => {
-    const [logs, setLogs] = useState(['AGENT: Standby...', 'AGENT: System Initialized.']);
+const AgentLog = ({ logs, error, isConnected }: { logs: ThoughtLog[], error: string | null, isConnected: boolean }) => {
 
     return (
         <div className="w-1/4 h-screen bg-black/50 backdrop-blur-md border-l-2 border-cyan-500/30 p-4 flex flex-col">
             <div className="flex items-center gap-2 mb-4">
                 <Bot className="text-cyan-400" />
                 <h2 className="text-lg font-bold text-cyan-400 tracking-wider">Agent Log</h2>
+                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
             </div>
             <div className="font-mono text-sm text-green-400 flex-grow overflow-y-auto space-y-2">
+                {error && (
+                    <Alert variant="destructive">
+                        <AlertTitle>Connection Error</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
                 {logs.map((log, index) => (
-                    <p key={index} className="animate-fade-in">{`> ${log}`}</p>
+                    <p key={index} className="animate-fade-in">{`> ${log.text}`}</p>
                 ))}
             </div>
         </div>
@@ -29,10 +37,27 @@ export default function Dashboard() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isSessionActive, setIsSessionActive] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
+    
+    const { isConnected, thoughtLogs, error, sendFrame } = useGeminiSession();
 
     const FACING_MODE_USER = "user";
     const FACING_MODE_ENVIRONMENT = "environment";
     const [facingMode, setFacingMode] = useState(FACING_MODE_USER);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isSessionActive && isConnected) {
+            interval = setInterval(() => {
+                const imageSrc = webcamRef.current?.getScreenshot();
+                if (imageSrc) {
+                    // Remove the data URI prefix before sending
+                    const base64Image = imageSrc.split(',')[1];
+                    sendFrame(base64Image);
+                }
+            }, 500); // Send a frame every 500ms
+        }
+        return () => clearInterval(interval);
+    }, [isSessionActive, isConnected, sendFrame]);
 
     const switchCamera = useCallback(() => {
         setFacingMode(
@@ -71,11 +96,13 @@ export default function Dashboard() {
                     <Button
                         onClick={toggleSession}
                         variant="outline"
+                        disabled={!isConnected}
                         className={`rounded-full px-6 py-3 text-lg font-semibold border-2 transition-all duration-300
                             ${isSessionActive
                                 ? 'bg-red-500/20 border-red-500 text-red-400 hover:bg-red-500/40 hover:text-red-300 shadow-lg shadow-red-500/50'
                                 : 'bg-cyan-500/20 border-cyan-500 text-cyan-400 hover:bg-cyan-500/40 hover:text-cyan-300 shadow-lg shadow-cyan-500/50'
-                            }`}
+                            }
+                            disabled:bg-slate-700/50 disabled:border-slate-600 disabled:text-slate-500 disabled:shadow-none`}
                     >
                         {isSessionActive ? <Square className="mr-2" /> : <Play className="mr-2" />}
                         {isSessionActive ? 'Stop Session' : 'Start Session'}
@@ -103,7 +130,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <AgentLog />
+            <AgentLog logs={thoughtLogs} error={error} isConnected={isConnected} />
         </div>
     );
 }
