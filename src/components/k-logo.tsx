@@ -1,23 +1,29 @@
 import { cn } from "@/lib/utils";
 import type { SVGProps } from "react";
 
-export function KinetixLogo(props: SVGProps<SVGSVGElement>) {
+// This is a simplified version of the logo from the design
+const CrossIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.5" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M12 5v14"/>
+    <path d="M5 12h14"/>
+  </svg>
+);
+
+
+export function KinetixLogo({ className, ...props }: SVGProps<SVGSVGElement> & {className?: string}) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M12 2a10 10 0 1 0 10 10" />
-      <path d="M9 9l3 3 3-3" />
-      <path d="M9 15l3-3 3 3" />
-      <path d="M12 12V6" />
-      <path d="M12 12v6" />
-    </svg>
+    <div className={cn("flex items-center gap-2", className)}>
+        <CrossIcon className="h-4 w-4" {...props} />
+        <span className="font-semibold tracking-widest text-sm text-slate-200">KINETIX AI</span>
+    </div>
   );
 }

@@ -3,7 +3,7 @@ export function SkeletonOverlay() {
   const jointColor = "#FFFFFF"; // White
   
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none" style={{ filter: 'drop-shadow(0 0 4px rgba(0, 255, 255, 0.7))' }}>
+    <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none" style={{ filter: 'drop-shadow(0 0 5px rgba(0, 255, 255, 0.7))' }}>
       <svg
         className="w-full h-full"
         viewBox="0 0 360 640"

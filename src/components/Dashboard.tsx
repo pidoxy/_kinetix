@@ -2,8 +2,9 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Play, MicOff, RefreshCw, Bot, Square, Radio, Settings } from 'lucide-react';
+import { Play, MicOff, RefreshCw, Bot, Square, Radio, Settings, Video, User, GaugeCircle, Grid3x3, Wind } from 'lucide-react';
 import { useGeminiSession, ThoughtLog } from '@/hooks/useGeminiSession';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { StatusIndicator } from '@/components/status-indicator';
@@ -13,17 +14,26 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { KinetixLogo } from '@/components/k-logo';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const AgentLog = ({ logs, error, isConnected }: { logs: ThoughtLog[], error: string | null, isConnected: boolean }) => {
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [logs]);
 
     return (
-        <div className="w-1/4 h-screen bg-black/80 backdrop-blur-md border-l-2 border-cyan-500/30 p-4 flex flex-col">
-            <div className="flex items-center gap-2 mb-4">
+        <div className="w-1/4 h-full bg-black/80 backdrop-blur-sm p-4 flex flex-col">
+            <div className="flex items-center gap-2 mb-4 shrink-0">
                 <Bot className="text-cyan-400" />
                 <h2 className="text-lg font-bold text-cyan-400 tracking-wider">Agent Log</h2>
                 <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
             </div>
-            <div className="font-mono text-sm text-green-400 flex-grow overflow-y-auto space-y-2">
+            <div ref={scrollRef} className="font-mono text-sm text-green-400 flex-grow overflow-y-auto space-y-2 pr-2">
                 {error && (
                     <Alert variant="destructive">
                         <AlertTitle>Connection Error</AlertTitle>
@@ -31,18 +41,50 @@ const AgentLog = ({ logs, error, isConnected }: { logs: ThoughtLog[], error: str
                     </Alert>
                 )}
                 {logs.map((log, index) => (
-                    <p key={index} className="animate-fade-in">{`> ${log.text}`}</p>
+                    <p key={index} className="animate-fade-in break-words whitespace-pre-wrap">{`> ${log.text}`}</p>
                 ))}
-                 <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
             </div>
         </div>
     );
 };
 
+const IdleScreen = ({ onStart }: { onStart: () => void }) => {
+    const bgImage = PlaceHolderImages.find(img => img.id === 'webcam-background');
 
-export default function Dashboard() {
+    return (
+        <div className="w-full h-full flex items-center justify-center relative overflow-hidden">
+            {bgImage && (
+                 <Image
+                    src={bgImage.imageUrl}
+                    alt={bgImage.description}
+                    fill
+                    className="object-cover scale-105"
+                    data-ai-hint={bgImage.imageHint}
+                />
+            )}
+            <div className="absolute inset-0 bg-slate-950/50" />
+
+            <div className="relative flex flex-col items-center justify-center bg-card/60 backdrop-blur-md border border-primary/30 rounded-2xl shadow-cyan-glow p-8 md:p-12 max-w-lg text-center">
+                <KinetixLogo className="h-8 w-8 text-primary mb-4" />
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-100 mb-4">Ready for your session?</h1>
+                <p className="text-slate-300 mb-8 max-w-sm">
+                    Ensure your full body is visible in the frame and the lighting is clear.
+                </p>
+                <Button
+                    onClick={onStart}
+                    size="lg"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-cyan-glow transition-all duration-300"
+                >
+                    <Play className="mr-3" />
+                    START SESSION
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+const ActiveSession = () => {
     const webcamRef = useRef<Webcam>(null);
-    const [isSessionActive, setIsSessionActive] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
     const [frameInterval, setFrameInterval] = useState(4); // Default to 4 seconds
     
@@ -54,17 +96,17 @@ export default function Dashboard() {
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        if (isSessionActive && isConnected) {
+        if (isConnected) {
             interval = setInterval(() => {
                 const imageSrc = webcamRef.current?.getScreenshot();
                 if (imageSrc) {
                     const base64Image = imageSrc.split(',')[1];
                     sendFrame(base64Image);
                 }
-            }, frameInterval * 1000); // Use the state for interval
+            }, frameInterval * 1000);
         }
         return () => clearInterval(interval);
-    }, [isSessionActive, isConnected, sendFrame, frameInterval]);
+    }, [isConnected, sendFrame, frameInterval]);
 
     const switchCamera = useCallback(() => {
         setFacingMode(
@@ -75,115 +117,79 @@ export default function Dashboard() {
         );
     }, []);
 
-    const toggleSession = () => {
-        setIsSessionActive(!isSessionActive);
-    };
-
     const toggleMute = () => {
         setIsMuted(!isMuted);
     };
 
-
     return (
-        <div className="flex h-screen bg-slate-900 text-slate-100">
-            <div className="relative w-3/4 h-screen">
+        <div className="flex h-full w-full">
+            <div className="relative flex-1">
                 <Webcam
                     ref={webcamRef}
-                    audio={!isMuted}
+                    audio={false} // Audio is handled separately
                     mirrored={facingMode === FACING_MODE_USER}
-                    videoConstraints={{ facingMode }}
+                    videoConstraints={{ facingMode, width: 1920, height: 1080 }}
                     className="absolute inset-0 w-full h-full object-cover"
                 />
-                {isSessionActive && <SkeletonOverlay />}
-                
-                <div className='absolute top-6 left-6 z-20'>
-                    <Badge variant={isSessionActive ? "destructive" : "secondary"} className={cn(
-                        "text-lg transition-all duration-300",
-                        isSessionActive && "animate-pulse"
-                    )}>
-                        <Radio className={cn("mr-2 h-4 w-4", isSessionActive && "text-red-400")} />
-                        {isSessionActive ? "LIVE" : "IDLE"}
-                    </Badge>
-                </div>
+                <SkeletonOverlay />
+                <StatusIndicator status={latestStatus} isProcessing={isProcessing} />
 
-                {isSessionActive && <StatusIndicator status={latestStatus} isProcessing={isProcessing} />}
-
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
-                    <Button
-                        onClick={toggleSession}
-                        variant="outline"
-                        disabled={!isConnected}
-                        className={`rounded-full px-6 py-3 text-lg font-semibold border-2 transition-all duration-300
-                            ${isSessionActive
-                                ? 'bg-red-500/20 border-red-500 text-red-400 hover:bg-red-500/40 hover:text-red-300 shadow-lg shadow-red-500/50'
-                                : 'bg-cyan-500/20 border-cyan-500 text-cyan-400 hover:bg-cyan-500/40 hover:text-cyan-300 shadow-lg shadow-cyan-500/50'
-                            }
-                            disabled:bg-slate-700/50 disabled:border-slate-600 disabled:text-slate-500 disabled:shadow-none`}
-                    >
-                        {isSessionActive ? <Square className="mr-2" /> : <Play className="mr-2" />}
-                        {isSessionActive ? 'Stop Session' : 'Start Session'}
-                    </Button>
-                    <Button
-                        onClick={toggleMute}
-                        variant="outline"
-                        size="icon"
-                        className={`rounded-full w-12 h-12 border-2 transition-all duration-300
-                            ${!isMuted
-                                ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400 hover:bg-yellow-500/40'
-                                : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700'
-                            }`}
-                    >
-                        <MicOff />
-                    </Button>
-                    <Button
-                        onClick={switchCamera}
-                        variant="outline"
-                        size="icon"
-                        className="rounded-full w-12 h-12 border-2 bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700 transition-all duration-300"
-                    >
-                        <RefreshCw />
-                    </Button>
-
-                     <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="rounded-full w-12 h-12 border-2 bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700 transition-all duration-300"
-                            >
-                                <Settings />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 bg-slate-800 border-slate-700 text-slate-200">
-                            <div className="grid gap-4">
-                                <div className="space-y-2">
-                                    <h4 className="font-medium leading-none">Settings</h4>
-                                    <p className="text-sm text-slate-400">
-                                        Adjust session parameters.
-                                    </p>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="frame-interval">Frame Interval ({frameInterval}s)</Label>
-                                    <Slider
-                                        id="frame-interval"
-                                        min={1}
-                                        max={10}
-                                        step={1}
-                                        value={[frameInterval]}
-                                        onValueChange={(value) => setFrameInterval(value[0])}
-                                    />
-                                    <p className="text-xs text-slate-500">
-                                        Lower values send data more often but use more API quota.
-                                    </p>
-                                </div>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
-
-                </div>
+                {/* You can add back controls here if needed, or integrate them into the main header */}
             </div>
-
             <AgentLog logs={thoughtLogs} error={error} isConnected={isConnected} />
+        </div>
+    );
+}
+
+
+export default function Dashboard() {
+    const [isSessionActive, setIsSessionActive] = useState(false);
+    const [latency] = useState(12); // Mock latency
+
+    const toggleSession = () => {
+        setIsSessionActive(!isSessionActive);
+    };
+
+    return (
+        <div className="flex flex-col h-screen bg-slate-950 text-slate-200 font-sans">
+            <header className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
+                <Badge variant={isSessionActive ? "destructive" : "secondary"} className={cn(
+                    "text-md transition-all duration-300 border-0",
+                    isSessionActive ? "bg-red-500/80 text-white" : "bg-primary/80 text-white",
+                )}>
+                    <div className={cn("w-2.5 h-2.5 rounded-full mr-2", isSessionActive ? "bg-white" : "bg-white/70")} />
+                    SYSTEM {isSessionActive ? "LIVE" : "IDLE"}
+                </Badge>
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon"><Settings className="text-slate-300" /></Button>
+                    <Button variant="ghost" size="icon"><Video className="text-slate-300" /></Button>
+                    <div className="w-px h-6 bg-white/20 mx-2"></div>
+                    <Button variant="ghost" className="rounded-full h-9 w-9 p-0 bg-slate-700">
+                        <User className="text-slate-300" />
+                    </Button>
+                </div>
+            </header>
+
+            <main className="flex-1 relative overflow-hidden">
+                {isSessionActive ? <ActiveSession /> : <IdleScreen onStart={toggleSession} />}
+            </main>
+
+            <footer className="flex items-center justify-between p-4 border-t border-white/10 text-xs text-slate-400 shrink-0">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <Grid3x3 className="h-3.5 w-3.5"/>
+                        <span>Calibration: Automatic</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <GaugeCircle className="h-3.5 w-3.5"/>
+                        <span>Latency: {latency}ms</span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-4">
+                    <Button variant="link" className="text-slate-400 hover:text-primary p-0 h-auto">Help Center</Button>
+                    <Button variant="link" className="text-slate-400 hover:text-primary p-0 h-auto">Privacy Policy</Button>
+                </div>
+            </footer>
         </div>
     );
 }
