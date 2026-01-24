@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Play, MicOff, RefreshCw, Bot, Square, Radio, Settings, Video, User, GaugeCircle, Grid3x3, Wind } from 'lucide-react';
+import { Play, Settings, Video, User, GaugeCircle, Grid3x3, Bot } from 'lucide-react';
 import { useGeminiSession, ThoughtLog } from '@/hooks/useGeminiSession';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { StatusIndicator } from '@/components/status-indicator';
@@ -16,6 +16,9 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { KinetixLogo } from '@/components/k-logo';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+
+const FACING_MODE_USER = "user";
+const FACING_MODE_ENVIRONMENT = "environment";
 
 const AgentLog = ({ logs, error, isConnected }: { logs: ThoughtLog[], error: string | null, isConnected: boolean }) => {
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -83,16 +86,9 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => {
     );
 }
 
-const ActiveSession = () => {
+const ActiveSession = ({ frameInterval, facingMode }: { frameInterval: number, facingMode: string }) => {
     const webcamRef = useRef<Webcam>(null);
-    const [isMuted, setIsMuted] = useState(true);
-    const [frameInterval, setFrameInterval] = useState(4); // Default to 4 seconds
-    
     const { isConnected, thoughtLogs, error, sendFrame, latestStatus, isProcessing } = useGeminiSession();
-
-    const FACING_MODE_USER = "user";
-    const FACING_MODE_ENVIRONMENT = "environment";
-    const [facingMode, setFacingMode] = useState(FACING_MODE_USER);
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -108,6 +104,34 @@ const ActiveSession = () => {
         return () => clearInterval(interval);
     }, [isConnected, sendFrame, frameInterval]);
 
+    return (
+        <div className="flex h-full w-full">
+            <div className="relative flex-1">
+                <Webcam
+                    ref={webcamRef}
+                    audio={false}
+                    mirrored={facingMode === FACING_MODE_USER}
+                    videoConstraints={{ facingMode, width: 1920, height: 1080 }}
+                    className="absolute inset-0 w-full h-full object-cover"
+                />
+                <SkeletonOverlay />
+                <StatusIndicator status={latestStatus} isProcessing={isProcessing} />
+            </div>
+            <AgentLog logs={thoughtLogs} error={error} isConnected={isConnected} />
+        </div>
+    );
+}
+
+export default function Dashboard() {
+    const [isSessionActive, setIsSessionActive] = useState(false);
+    const [latency] = useState(12); // Mock latency
+    const [frameInterval, setFrameInterval] = useState(4);
+    const [facingMode, setFacingMode] = useState(FACING_MODE_USER);
+
+    const toggleSession = () => {
+        setIsSessionActive(!isSessionActive);
+    };
+    
     const switchCamera = useCallback(() => {
         setFacingMode(
             (prevState) =>
@@ -116,39 +140,6 @@ const ActiveSession = () => {
                     : FACING_MODE_USER
         );
     }, []);
-
-    const toggleMute = () => {
-        setIsMuted(!isMuted);
-    };
-
-    return (
-        <div className="flex h-full w-full">
-            <div className="relative flex-1">
-                <Webcam
-                    ref={webcamRef}
-                    audio={false} // Audio is handled separately
-                    mirrored={facingMode === FACING_MODE_USER}
-                    videoConstraints={{ facingMode, width: 1920, height: 1080 }}
-                    className="absolute inset-0 w-full h-full object-cover"
-                />
-                <SkeletonOverlay />
-                <StatusIndicator status={latestStatus} isProcessing={isProcessing} />
-
-                {/* You can add back controls here if needed, or integrate them into the main header */}
-            </div>
-            <AgentLog logs={thoughtLogs} error={error} isConnected={isConnected} />
-        </div>
-    );
-}
-
-
-export default function Dashboard() {
-    const [isSessionActive, setIsSessionActive] = useState(false);
-    const [latency] = useState(12); // Mock latency
-
-    const toggleSession = () => {
-        setIsSessionActive(!isSessionActive);
-    };
 
     return (
         <div className="flex flex-col h-screen bg-slate-950 text-slate-200 font-sans">
@@ -161,8 +152,35 @@ export default function Dashboard() {
                     SYSTEM {isSessionActive ? "LIVE" : "IDLE"}
                 </Badge>
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon"><Settings className="text-slate-300" /></Button>
-                    <Button variant="ghost" size="icon"><Video className="text-slate-300" /></Button>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon"><Settings className="text-slate-300" /></Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                            <div className="grid gap-4">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium leading-none">Frame Interval</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                        Set how often to analyze your form (in seconds).
+                                    </p>
+                                </div>
+                                <Slider
+                                    id="frame-interval"
+                                    defaultValue={[frameInterval]}
+                                    max={10}
+                                    min={1}
+                                    step={1}
+                                    onValueChange={(value) => setFrameInterval(value[0])}
+                                />
+                                <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>Fast (1s)</span>
+                                    <span>Slow (10s)</span>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+
+                    <Button variant="ghost" size="icon" onClick={switchCamera}><Video className="text-slate-300" /></Button>
                     <div className="w-px h-6 bg-white/20 mx-2"></div>
                     <Button variant="ghost" className="rounded-full h-9 w-9 p-0 bg-slate-700">
                         <User className="text-slate-300" />
@@ -171,7 +189,7 @@ export default function Dashboard() {
             </header>
 
             <main className="flex-1 relative overflow-hidden">
-                {isSessionActive ? <ActiveSession /> : <IdleScreen onStart={toggleSession} />}
+                {isSessionActive ? <ActiveSession frameInterval={frameInterval} facingMode={facingMode}/> : <IdleScreen onStart={toggleSession} />}
             </main>
 
             <footer className="flex items-center justify-between p-4 border-t border-white/10 text-xs text-slate-400 shrink-0">
