@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -88,7 +87,7 @@ export function useGeminiSession() {
         };
 
         socket.onerror = (event) => {
-            console.error("WebSocket error:", event);
+            console.error(`WebSocket error attempting to connect to: ${WEBSOCKET_URL}`);
             setError(`Connection failed. Check if the backend is running at ${WEBSOCKET_URL}.`);
             setIsConnected(false);
         };
