@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Play, Settings, Video, User, GaugeCircle, Grid3x3, Bot } from 'lucide-react';
+import { Play, Square, Settings, Video, User, GaugeCircle, Grid3x3, Bot } from 'lucide-react';
 import { useGeminiSession, ThoughtLog } from '@/hooks/useGeminiSession';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { StatusIndicator } from '@/components/status-indicator';
@@ -192,21 +192,38 @@ export default function Dashboard() {
                 {isSessionActive ? <ActiveSession frameInterval={frameInterval} facingMode={facingMode}/> : <IdleScreen onStart={toggleSession} />}
             </main>
 
-            <footer className="flex items-center justify-between p-4 border-t border-white/10 text-xs text-slate-400 shrink-0">
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                        <Grid3x3 className="h-3.5 w-3.5"/>
-                        <span>Calibration: Automatic</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <GaugeCircle className="h-3.5 w-3.5"/>
-                        <span>Latency: {latency}ms</span>
-                    </div>
-                </div>
-                <div className="flex items-center gap-4">
-                    <Button variant="link" className="text-slate-400 hover:text-primary p-0 h-auto">Help Center</Button>
-                    <Button variant="link" className="text-slate-400 hover:text-primary p-0 h-auto">Privacy Policy</Button>
-                </div>
+            <footer className={cn(
+                "flex items-center p-4 border-t border-white/10 text-xs text-slate-400 shrink-0",
+                isSessionActive ? "justify-center" : "justify-between"
+            )}>
+                {isSessionActive ? (
+                    <Button
+                        onClick={toggleSession}
+                        size="lg"
+                        variant="destructive"
+                        className="font-bold text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-red-glow transition-all duration-300"
+                    >
+                        <Square className="mr-3" />
+                        STOP SESSION
+                    </Button>
+                ) : (
+                    <>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <Grid3x3 className="h-3.5 w-3.5"/>
+                                <span>Calibration: Automatic</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <GaugeCircle className="h-3.5 w-3.5"/>
+                                <span>Latency: {latency}ms</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <Button variant="link" className="text-slate-400 hover:text-primary p-0 h-auto">Help Center</Button>
+                            <Button variant="link" className="text-slate-400 hover:text-primary p-0 h-auto">Privacy Policy</Button>
+                        </div>
+                    </>
+                )}
             </footer>
         </div>
     );

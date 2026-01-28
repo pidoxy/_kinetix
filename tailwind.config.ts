@@ -72,6 +72,7 @@ export default {
       },
       boxShadow: {
         'cyan-glow': '0 0 25px -5px hsl(var(--primary) / 0.6), 0 0 15px -6px hsl(var(--primary) / 0.5)',
+        'red-glow': '0 0 25px -5px hsl(var(--destructive) / 0.6), 0 0 15px -6px hsl(var(--destructive) / 0.5)',
       },
       keyframes: {
         'accordion-down': {
