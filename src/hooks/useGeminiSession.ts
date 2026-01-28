@@ -20,19 +20,16 @@ export function useGeminiSession() {
     const [isProcessing, setIsProcessing] = useState(false);
     
     const ws = useRef<WebSocket | null>(null);
+    const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
 
     const audioQueue = useRef<ArrayBuffer[]>([]);
     const audioContext = useRef<AudioContext | null>(null);
     const isPlaying = useRef(false);
 
-    useEffect(() => {
-        if (typeof window !== 'undefined' && !audioContext.current) {
-            try {
-                audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-            } catch (e) {
-                console.error("AudioContext is not supported by this browser.", e);
-                setError("Audio is not supported by this browser.");
-            }
+    const connect = useCallback(() => {
+        if (ws.current && (ws.current.readyState === WebSocket.OPEN || ws.current.readyState === WebSocket.CONNECTING)) {
+            console.log("WebSocket is already open or connecting.");
+            return;
         }
 
         const socket = new WebSocket(WEBSOCKET_URL);
@@ -43,6 +40,9 @@ export function useGeminiSession() {
             setIsConnected(true);
             setError(null);
             setThoughtLogs([{ timestamp: Date.now(), text: "Connection established. Ready for session." }]);
+            if (reconnectTimeout.current) {
+                clearTimeout(reconnectTimeout.current);
+            }
         };
 
         socket.onmessage = async (event) => {
@@ -51,7 +51,7 @@ export function useGeminiSession() {
                     const message = JSON.parse(event.data);
                     
                     if (message.type === 'THOUGHT' && message.data) {
-                        setIsProcessing(false); // Stop processing indicator when thought arrives
+                        setIsProcessing(false);
                         setThoughtLogs((prevLogs) => [...prevLogs, { timestamp: Date.now(), text: message.data }]);
                     }
                     
@@ -65,14 +65,18 @@ export function useGeminiSession() {
                     }
                     
                     if (message.type === 'SPEECH' && message.data) {
-                        // Decode base64 audio and queue it for playback
-                        const audioData = atob(message.data);
-                        const audioBytes = new Uint8Array(audioData.length);
-                        for (let i = 0; i < audioData.length; i++) {
-                            audioBytes[i] = audioData.charCodeAt(i);
+                        try {
+                            const audioData = atob(message.data);
+                            const audioBytes = new Uint8Array(audioData.length);
+                            for (let i = 0; i < audioData.length; i++) {
+                                audioBytes[i] = audioData.charCodeAt(i);
+                            }
+                            audioQueue.current.push(audioBytes.buffer);
+                            playAudioFromQueue();
+                        } catch (e) {
+                            console.error("Failed to decode base64 audio data:", e);
+                            setThoughtLogs((prev) => [...prev, { timestamp: Date.now(), text: `ERROR: Could not decode audio.`}]);
                         }
-                        audioQueue.current.push(audioBytes.buffer);
-                        playAudioFromQueue();
                     }
 
                 } catch (e) {
@@ -85,22 +89,49 @@ export function useGeminiSession() {
 
         socket.onerror = (event) => {
             console.error("WebSocket error:", event);
-            setError("Connection failed. Is the backend running?");
+            setError(`Connection failed. Check if the backend is running at ${WEBSOCKET_URL}.`);
             setIsConnected(false);
-            setThoughtLogs([{ timestamp: Date.now(), text: "Connection failed." }]);
         };
 
         socket.onclose = () => {
             console.log("WebSocket connection closed");
             setIsConnected(false);
-            setLatestStatus('idle');
-            setThoughtLogs((prev) => [...prev, { timestamp: Date.now(), text: "Connection closed."}]);
+            if(navigator.onLine) {
+                setThoughtLogs((prev) => [...prev, { timestamp: Date.now(), text: "Connection lost. Attempting to reconnect in 5 seconds..."}]);
+                if (reconnectTimeout.current) {
+                    clearTimeout(reconnectTimeout.current);
+                }
+                reconnectTimeout.current = setTimeout(connect, 5000);
+            } else {
+                 setThoughtLogs((prev) => [...prev, { timestamp: Date.now(), text: "Connection lost. Please check your internet connection."}]);
+            }
         };
 
-        return () => {
-            socket.close();
-        };
     }, []);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !audioContext.current) {
+            try {
+                audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            } catch (e) {
+                console.error("AudioContext is not supported by this browser.", e);
+                setError("Audio is not supported by this browser.");
+            }
+        }
+        
+        connect();
+
+        return () => {
+            if (reconnectTimeout.current) {
+                clearTimeout(reconnectTimeout.current);
+            }
+            if (ws.current) {
+                ws.current.onclose = null; 
+                ws.current.close();
+            }
+        };
+    }, [connect]);
+
 
     const playAudioFromQueue = useCallback(async () => {
         if (isPlaying.current || audioQueue.current.length === 0 || !audioContext.current) {
@@ -112,7 +143,6 @@ export function useGeminiSession() {
 
         if (audioData) {
             try {
-                // The backend now sends MP3 data, which is what decodeAudioData expects.
                 if (audioContext.current.state === 'suspended') {
                     await audioContext.current.resume();
                 }
@@ -130,7 +160,6 @@ export function useGeminiSession() {
                 console.error("Error decoding or playing audio:", e);
                 setError("Failed to play audio feedback.");
                 isPlaying.current = false;
-                // Try to play the next item even if this one fails
                 playAudioFromQueue(); 
             }
         } else {
@@ -150,5 +179,3 @@ export function useGeminiSession() {
 
     return { isConnected, thoughtLogs, error, sendFrame, latestStatus, isProcessing };
 }
-
-    
