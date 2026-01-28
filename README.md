@@ -4,7 +4,7 @@
 
 ## Elevator Pitch
 
-Kinetix is your personal AI-powered physical therapy assistant. Using just your webcam, Kinetix analyzes your exercise form in real-time, providing immediate visual and spoken feedback to help you move safely and effectively. It's like having a world-class biomechanics coach in your living room, guiding you to perfect form and preventing injury, one rep at a time.
+Kinetix is your AI personal trainer. Using your webcam, it analyzes your exercise form in real-time, providing instant visual and spoken feedback to ensure perfect technique and prevent injury.
 
 ## About This Project
 

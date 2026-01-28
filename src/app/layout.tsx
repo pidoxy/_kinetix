@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
   title: 'Kinetix AI',
-  description: 'Your AI personal trainer for perfect form.',
+  description: 'Kinetix is your AI personal trainer. Using your webcam, it analyzes your exercise form in real-time, providing instant visual and spoken feedback to ensure perfect technique and prevent injury.',
 };
 
 export default function RootLayout({
