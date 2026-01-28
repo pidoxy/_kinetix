@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Kinetix',
-  description: 'A real-time physical therapy assistant.',
+  title: 'Kinetix AI',
+  description: 'Your AI personal trainer for perfect form.',
 };
 
 export default function RootLayout({
