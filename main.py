@@ -1,7 +1,6 @@
 
 import asyncio
 import base64
-import io
 import json
 import os
 
@@ -9,7 +8,8 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from PIL import Image
+from pydantic import BaseModel
+from typing import List
 
 # Load environment variables from .env file
 load_dotenv()
@@ -57,29 +57,26 @@ Do not include markdown formatting (```json ... ```) in your response.
 Your entire response must be a single, valid JSON object.
 """
 
-generation_config = {
-    "temperature": 0.2,
-    "top_p": 0.95,
-    "top_k": 64,
-    "max_output_tokens": 8192,
-    "response_mime_type": "application/json",
-}
-
-safety_settings = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-]
-
 analysis_model = genai.GenerativeModel(
     model_name=ANALYSIS_MODEL_NAME,
-    safety_settings=safety_settings,
-    generation_config=generation_config,
     system_instruction=SYSTEM_INSTRUCTION,
+    generation_config={
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "top_k": 64,
+        "max_output_tokens": 8192,
+        "response_mime_type": "application/json",
+    },
+    safety_settings=[
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    ],
 )
 
 tts_model = genai.GenerativeModel(TTS_MODEL_NAME)
+
 
 # --- FastAPI App ---
 app = FastAPI()
@@ -99,6 +96,46 @@ def read_root():
     return {"status": "Kinetix AI Backend is running"}
 
 
+# Define the request body model for the new endpoint
+class SessionSummaryRequest(BaseModel):
+    sessionData: str
+
+@app.post("/summarize")
+async def summarize_session(request: SessionSummaryRequest):
+    """
+    Analyzes a log of session performance and returns an AI-generated summary.
+    """
+    prompt = f"""
+    You are an AI-powered fitness coach providing personalized exercise summaries.
+
+    Based on the following session data, where 'good' indicates good form and 'bad' indicates a form correction was needed, create a comprehensive summary of the user's performance. The data represents a timeline of form quality during an exercise session.
+
+    Session Data: {request.sessionData}
+
+    Analyze the data to identify patterns. For example, did the user start strong and then fatigue? Were there consistent issues?
+    
+    Provide a concise, encouraging, and actionable summary. Highlight achievements and pinpoint specific areas for improvement. Keep the summary under 75 words.
+    
+    The output must be a JSON object with a single key "summary".
+    
+    Example output:
+    {{
+        "summary": "Great work! You maintained excellent form for most of the session. Focus on keeping your core engaged towards the end to prevent your back from rounding."
+    }}
+    """
+
+    try:
+        response = await analysis_model.generate_content_async(prompt)
+        summary_json = json.loads(response.text)
+        summary_text = summary_json.get("summary", "Could not parse summary from AI response.")
+        
+        return {"summary": summary_text}
+
+    except Exception as e:
+        print(f"Error during summary generation: {e}")
+        return {"summary": "An error occurred while generating your summary."}
+
+
 async def text_to_speech(text):
     """Converts text to speech and returns the audio data as base64."""
     try:
@@ -107,7 +144,6 @@ async def text_to_speech(text):
             f"Please say '{text}' in a clear and encouraging tone.",
             stream=False
         )
-        # The API returns audio data directly. We need to find it in the response parts.
         audio_part = next((part for part in response.parts if part.mime_type.startswith("audio/")), None)
         if audio_part:
             print("Audio generated successfully.")
@@ -145,14 +181,14 @@ async def websocket_session(websocket: WebSocket):
             
             try:
                 image_bytes = base64.b64decode(base64_image)
-                image = Image.open(io.BytesIO(image_bytes))
+                image_part = {"mime_type": "image/jpeg", "data": image_bytes}
             except Exception as e:
                 print(f"Error decoding image: {e}")
                 continue
 
             try:
                 print("Sending frame to Gemini...")
-                response = await chat_session.send_message_async(image, stream=False)
+                response = await chat_session.send_message_async(image_part, stream=False)
                 response_text = response.text
                 print(f"Received from Gemini: {response_text}")
 
