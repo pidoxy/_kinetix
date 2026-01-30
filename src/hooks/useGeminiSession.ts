@@ -17,6 +17,7 @@ export function useGeminiSession() {
     const [error, setError] = useState<string | null>(null);
     const [latestStatus, setLatestStatus] = useState<FormStatus>("idle");
     const [isProcessing, setIsProcessing] = useState(false);
+    const [sessionSummary, setSessionSummary] = useState<any | null>(null);
     
     const ws = useRef<WebSocket | null>(null);
     const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -52,18 +53,14 @@ export function useGeminiSession() {
                     if (message.type === 'THOUGHT' && message.data) {
                         setIsProcessing(false);
                         setThoughtLogs((prevLogs) => [...prevLogs, { timestamp: Date.now(), text: message.data }]);
-                    }
-                    
-                    if (message.type === 'STATUS' && message.data) {
+                    } else if (message.type === 'STATUS' && message.data) {
                         const status = message.data.toLowerCase();
                         if (status === 'green') {
                             setLatestStatus('good');
                         } else if (status === 'red') {
                             setLatestStatus('bad');
                         }
-                    }
-                    
-                    if (message.type === 'SPEECH' && message.data) {
+                    } else if (message.type === 'SPEECH' && message.data) {
                         try {
                             const audioData = atob(message.data);
                             const audioBytes = new Uint8Array(audioData.length);
@@ -76,6 +73,12 @@ export function useGeminiSession() {
                             console.error("Failed to decode base64 audio data:", e);
                             setThoughtLogs((prev) => [...prev, { timestamp: Date.now(), text: `ERROR: Could not decode audio.`}]);
                         }
+                    } else if (message.type === 'SESSION_SUMMARY' && message.data) {
+                        console.log("Received session summary:", message.data);
+                        setIsProcessing(false);
+                        setSessionSummary(message.data);
+                    } else if (message.type === 'SESSION_ENDED') {
+                        console.log("Session ended message received.");
                     }
 
                 } catch (e) {
@@ -118,7 +121,8 @@ export function useGeminiSession() {
             }
         }
         
-        connect();
+        // Don't auto-connect on load, let the user start the session.
+        // connect();
 
         return () => {
             if (reconnectTimeout.current) {
@@ -176,5 +180,21 @@ export function useGeminiSession() {
         }
     };
 
-    return { isConnected, thoughtLogs, error, sendFrame, latestStatus, isProcessing };
+    const endSession = () => {
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+            setIsProcessing(true);
+            setThoughtLogs((prev) => [...prev, { timestamp: Date.now(), text: "Session ended. Generating summary..."}]);
+            ws.current.send(JSON.stringify({ type: 'END_SESSION' }));
+        }
+    };
+    
+    const resetSession = () => {
+        setThoughtLogs([]);
+        setLatestStatus('idle');
+        setError(null);
+        setSessionSummary(null);
+        connect();
+    };
+
+    return { isConnected, thoughtLogs, error, sendFrame, latestStatus, isProcessing, sessionSummary, endSession, resetSession, connect };
 }

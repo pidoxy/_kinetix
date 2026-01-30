@@ -2,18 +2,16 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Settings, Video, User, GaugeCircle, Grid3x3, Square, Loader } from 'lucide-react';
-import { useGeminiSession, FormStatus } from '@/hooks/useGeminiSession';
+import { Settings, Video, User, Square, Loader } from 'lucide-react';
+import { useGeminiSession } from '@/hooks/useGeminiSession';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 
 import { ActiveSession } from './ActiveSession';
 import { IdleScreen } from './IdleScreen';
 import { SessionSummary } from './SessionSummary';
-import { generateSummaryAction } from '@/app/actions';
 
 const FACING_MODE_USER = "user";
 const FACING_MODE_ENVIRONMENT = "environment";
@@ -30,20 +28,26 @@ const LoadingSummary = () => (
 
 export default function Dashboard() {
     const [sessionState, setSessionState] = useState<SessionState>('idle');
-    const [latency] = useState(12); // Mock latency
     const [frameInterval, setFrameInterval] = useState(4);
     const [facingMode, setFacingMode] = useState(FACING_MODE_USER);
 
-    const [sessionFormLog, setSessionFormLog] = useState<FormStatus[]>([]);
-    const [summary, setSummary] = useState('');
-
-    const { isConnected, thoughtLogs, error, sendFrame, latestStatus, isProcessing } = useGeminiSession();
+    const { 
+        isConnected, 
+        thoughtLogs, 
+        error, 
+        sendFrame, 
+        latestStatus, 
+        isProcessing, 
+        sessionSummary,
+        endSession,
+        resetSession,
+    } = useGeminiSession();
 
     useEffect(() => {
-        if (sessionState === 'active' && latestStatus !== 'idle' && !isProcessing) {
-            setSessionFormLog(prev => [...prev, latestStatus]);
+        if (sessionSummary && sessionState === 'generating_summary') {
+            setSessionState('summary');
         }
-    }, [latestStatus, sessionState, isProcessing]);
+    }, [sessionSummary, sessionState]);
 
     const switchCamera = useCallback(() => {
         setFacingMode(
@@ -55,24 +59,13 @@ export default function Dashboard() {
     }, []);
 
     const handleStartSession = () => {
-        setSessionFormLog([]);
-        setSummary('');
+        resetSession();
         setSessionState('active');
     };
 
-    const handleStopSession = async () => {
+    const handleStopSession = () => {
         setSessionState('generating_summary');
-        try {
-            const summaryResult = await generateSummaryAction({
-                sessionData: JSON.stringify(sessionFormLog),
-            });
-            setSummary(summaryResult);
-        } catch (e) {
-            console.error('Failed to generate summary', e);
-            setSummary('We encountered an error generating your summary. Please try again.');
-        } finally {
-            setSessionState('summary');
-        }
+        endSession();
     };
 
     const handleCloseSummary = () => {
@@ -144,34 +137,28 @@ export default function Dashboard() {
                     />
                 }
                 {sessionState === 'generating_summary' && <LoadingSummary />}
-                {sessionState === 'summary' && <SessionSummary summary={summary} onClose={handleCloseSummary} />}
+                {sessionState === 'summary' && sessionSummary && <SessionSummary summary={sessionSummary} onClose={handleCloseSummary} />}
             </main>
 
             <footer className={cn(
                 "flex items-center p-4 border-t border-white/10 text-xs text-slate-400 shrink-0",
                  sessionState === 'active' ? "justify-center" : "justify-between"
             )}>
-                {sessionState === 'active' ? (
+                 {sessionState === 'active' ? (
                     <Button
                         onClick={handleStopSession}
                         size="lg"
                         variant="destructive"
-                        className="font-bold text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-red-glow transition-all duration-300"
+                        className="font-bold text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-red-glow transition-all duration-300 disabled:opacity-70"
+                        disabled={isProcessing && sessionState !== 'generating_summary'}
                     >
                         <Square className="mr-3" />
-                        STOP SESSION
+                        {sessionState === 'generating_summary' ? 'GENERATING SUMMARY...' : 'STOP SESSION'}
                     </Button>
-                ) : sessionState === 'idle' ? (
+                ) : (sessionState === 'idle' || sessionState === 'summary') ? (
                     <>
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                                <Grid3x3 className="h-3.5 w-3.5"/>
-                                <span>Calibration: Automatic</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <GaugeCircle className="h-3.5 w-3.5"/>
-                                <span>Latency: {latency}ms</span>
-                            </div>
+                            <span>Kinetix AI v1.0</span>
                         </div>
                         <div className="flex items-center gap-4">
                             <Button variant="link" className="text-slate-400 hover:text-primary p-0 h-auto">Help Center</Button>

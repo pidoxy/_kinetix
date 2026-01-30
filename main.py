@@ -1,15 +1,17 @@
-
 import asyncio
 import base64
 import json
 import os
+import time
+from datetime import datetime, timezone
+from pydantic import BaseModel
+from typing import List
 
-import google.generativeai as genai
+from google import genai
+from google.generativeai import types
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List
 
 # Load environment variables from .env file
 load_dotenv()
@@ -19,7 +21,9 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY not found in .env file")
 
+# Use the new GenerativeModel API
 genai.configure(api_key=GEMINI_API_KEY)
+
 
 # --- AI Model Setup ---
 ANALYSIS_MODEL_NAME = "gemini-1.5-pro-latest"
@@ -38,27 +42,59 @@ Based on your analysis, you MUST return a single, valid JSON object with the fol
 - "status": A single word indicating the quality of the user's form. It must be either "GREEN" for good form or "RED" for poor form that requires correction.
 - "speech_text": A concise, encouraging, and clear instruction for the user to either maintain their form or correct it. This text will be converted to speech. Keep it under 15 words.
 
+IMPORTANT: If the user's full body is not visible (too close, partially out of frame, etc.), do NOT over-explain this technically. Simply tell them to step back or adjust their camera. Provide your best analysis with whatever IS visible rather than refusing to analyze. Only use "RED" for actual form problems, not for camera positioning.
+
 Example for good form:
 {
-  "thought_signature": "User's spine is neutral, core is engaged. Squat depth is adequate, knees are tracking over feet. Excellent form.",
+  "thought_signature": "Spine is neutral, core is engaged. Squat depth is adequate, knees tracking over toes. No valgus collapse detected.",
   "status": "GREEN",
   "speech_text": "Great form! Keep this pace."
 }
 
 Example for poor form:
 {
-  "thought_signature": "User's back is rounding, indicating a loss of lumbar stability. Knees are caving inward (valgus collapse). High risk of injury.",
+  "thought_signature": "Thoracic flexion increasing, lumbar stability compromised. Knees caving inward (valgus collapse). Injury risk elevated.",
   "status": "RED",
   "speech_text": "Stop. Straighten your back and keep your knees out."
 }
 
+Example when user is too close or partially visible:
+{
+  "thought_signature": "Only upper body visible. Shoulder alignment and thoracic posture appear sound from current view.",
+  "status": "GREEN",
+  "speech_text": "Step back so I can see your full body."
+}
+
 Analyze each frame independently and provide immediate, relevant feedback.
-Do not include markdown formatting (```json ... ```) in your response.
+Do not include markdown formatting in your response.
 Your entire response must be a single, valid JSON object.
 """
 
+SUMMARY_PROMPT_TEMPLATE = """
+The exercise session has now ended. Here are the session statistics:
+
+- Duration: {duration_formatted} ({duration_seconds} seconds)
+- Total frames analyzed: {total_frames}
+- Good form (GREEN): {green_count} ({green_percentage:.1f}%)
+- Poor form (RED): {red_count} ({red_percentage:.1f}%)
+- Form rating: {rating}
+- Top corrections given: {top_corrections}
+
+Based on your analysis throughout this session, provide a summary in the following JSON format:
+{{
+  "overall_assessment": "2-3 sentence overall assessment of the user's performance",
+  "strengths": ["strength 1", "strength 2"],
+  "areas_for_improvement": ["area 1", "area 2"],
+  "recommendations": ["recommendation 1", "recommendation 2"],
+  "encouragement": "1 sentence of encouragement"
+}}
+
+Be specific and reference actual observations you made during the session.
+Your entire response must be a single valid JSON object matching the format above.
+"""
+
 analysis_model = genai.GenerativeModel(
-    model_name=ANALYSIS_MODEL_NAME,
+    ANALYSIS_MODEL_NAME,
     system_instruction=SYSTEM_INSTRUCTION,
     generation_config={
         "temperature": 0.2,
@@ -67,16 +103,14 @@ analysis_model = genai.GenerativeModel(
         "max_output_tokens": 8192,
         "response_mime_type": "application/json",
     },
-    safety_settings=[
+     safety_settings=[
         {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
         {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
         {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
         {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
     ],
 )
-
 tts_model = genai.GenerativeModel(TTS_MODEL_NAME)
-
 
 # --- FastAPI App ---
 app = FastAPI()
@@ -94,46 +128,6 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     return {"status": "Kinetix AI Backend is running"}
-
-
-# Define the request body model for the new endpoint
-class SessionSummaryRequest(BaseModel):
-    sessionData: str
-
-@app.post("/summarize")
-async def summarize_session(request: SessionSummaryRequest):
-    """
-    Analyzes a log of session performance and returns an AI-generated summary.
-    """
-    prompt = f"""
-    You are an AI-powered fitness coach providing personalized exercise summaries.
-
-    Based on the following session data, where 'good' indicates good form and 'bad' indicates a form correction was needed, create a comprehensive summary of the user's performance. The data represents a timeline of form quality during an exercise session.
-
-    Session Data: {request.sessionData}
-
-    Analyze the data to identify patterns. For example, did the user start strong and then fatigue? Were there consistent issues?
-    
-    Provide a concise, encouraging, and actionable summary. Highlight achievements and pinpoint specific areas for improvement. Keep the summary under 75 words.
-    
-    The output must be a JSON object with a single key "summary".
-    
-    Example output:
-    {{
-        "summary": "Great work! You maintained excellent form for most of the session. Focus on keeping your core engaged towards the end to prevent your back from rounding."
-    }}
-    """
-
-    try:
-        response = await analysis_model.generate_content_async(prompt)
-        summary_json = json.loads(response.text)
-        summary_text = summary_json.get("summary", "Could not parse summary from AI response.")
-        
-        return {"summary": summary_text}
-
-    except Exception as e:
-        print(f"Error during summary generation: {e}")
-        return {"summary": "An error occurred while generating your summary."}
 
 
 async def text_to_speech(text):
@@ -156,6 +150,126 @@ async def text_to_speech(text):
         return None
 
 
+def _compute_rating(green_pct):
+    """Compute a form rating from green percentage."""
+    if green_pct >= 90:
+        return "EXCELLENT"
+    elif green_pct >= 75:
+        return "GOOD"
+    elif green_pct >= 55:
+        return "FAIR"
+    else:
+        return "NEEDS_WORK"
+
+
+def _get_top_corrections(analyses, max_items=5):
+    """Extract deduplicated correction texts from RED frames."""
+    seen = set()
+    corrections = []
+    for entry in analyses:
+        if entry.get("status") == "RED":
+            text = entry.get("speech_text", "")
+            if text and text not in seen:
+                seen.add(text)
+                corrections.append(text)
+                if len(corrections) >= max_items:
+                    break
+    return corrections
+
+
+def build_fallback_summary(session_data):
+    """Build a stats-only summary when Gemini is unavailable."""
+    duration = time.time() - session_data["start_time"]
+    total = session_data["green_count"] + session_data["red_count"]
+    green_pct = (session_data["green_count"] / total * 100) if total > 0 else 0.0
+    minutes, seconds = divmod(int(duration), 60)
+
+    return {
+        "session_duration_seconds": int(duration),
+        "session_duration_formatted": f"{minutes:02d}:{seconds:02d}",
+        "total_frames_analyzed": total,
+        "form_score": {
+            "green_count": session_data["green_count"],
+            "red_count": session_data["red_count"],
+            "green_percentage": round(green_pct, 1),
+            "rating": _compute_rating(green_pct) if total > 0 else "NO_DATA",
+        },
+        "ai_summary": None,
+        "corrections_given": session_data["red_count"],
+        "top_corrections": _get_top_corrections(session_data["analyses"]),
+    }
+
+
+async def generate_session_summary(chat, session_data):
+    """Generate a full session summary with AI narrative."""
+    duration = time.time() - session_data["start_time"]
+    total = session_data["green_count"] + session_data["red_count"]
+    green_pct = (session_data["green_count"] / total * 100) if total > 0 else 0.0
+    red_pct = 100.0 - green_pct if total > 0 else 0.0
+    minutes, seconds = divmod(int(duration), 60)
+    duration_formatted = f"{minutes:02d}:{seconds:02d}"
+    rating = _compute_rating(green_pct) if total > 0 else "NO_DATA"
+    top_corrections = _get_top_corrections(session_data["analyses"])
+
+    base_summary = {
+        "session_duration_seconds": int(duration),
+        "session_duration_formatted": duration_formatted,
+        "total_frames_analyzed": total,
+        "form_score": {
+            "green_count": session_data["green_count"],
+            "red_count": session_data["red_count"],
+            "green_percentage": round(green_pct, 1),
+            "rating": rating,
+        },
+        "ai_summary": None,
+        "corrections_given": session_data["red_count"],
+        "top_corrections": top_corrections,
+    }
+
+    if total == 0:
+        return base_summary
+
+    try:
+        # Switch the chat session to use the summary prompt
+        summary_model = genai.GenerativeModel(
+            ANALYSIS_MODEL_NAME,
+            generation_config={
+                "response_mime_type": "application/json",
+            }
+        )
+        summary_chat = summary_model.start_chat()
+
+        prompt = SUMMARY_PROMPT_TEMPLATE.format(
+            duration_formatted=duration_formatted,
+            duration_seconds=int(duration),
+            total_frames=total,
+            green_count=session_data["green_count"],
+            green_percentage=green_pct,
+            red_count=session_data["red_count"],
+            red_percentage=red_pct,
+            rating=rating,
+            top_corrections=", ".join(top_corrections) if top_corrections else "None",
+        )
+
+        response = await summary_chat.send_message_async(prompt)
+        response_text = response.text
+        print(f"Summary response from Gemini: {response_text}")
+
+        ai_summary = json.loads(response_text)
+        base_summary["ai_summary"] = {
+            "overall_assessment": ai_summary.get("overall_assessment", ""),
+            "strengths": ai_summary.get("strengths", []),
+            "areas_for_improvement": ai_summary.get("areas_for_improvement", []),
+            "recommendations": ai_summary.get("recommendations", []),
+            "encouragement": ai_summary.get("encouragement", ""),
+        }
+    except Exception as e:
+        print(f"Error generating AI summary: {e}")
+        # ai_summary stays None — fallback to stats-only
+
+    return base_summary
+
+
 @app.websocket("/ws/session")
 async def websocket_session(websocket: WebSocket):
     """
@@ -164,13 +278,32 @@ async def websocket_session(websocket: WebSocket):
     await websocket.accept()
     print("WebSocket connection accepted.")
 
-    chat_session = analysis_model.start_chat(history=[])
+    chat = analysis_model.start_chat(history=[])
+
+    session_data = {
+        "start_time": time.time(),
+        "green_count": 0,
+        "red_count": 0,
+        "analyses": [],  # capped at 500 entries
+    }
 
     try:
         while True:
             message_json = await websocket.receive_json()
             message_type = message_json.get("type")
-            
+
+            if message_type == "END_SESSION":
+                print("Received END_SESSION — generating summary...")
+                try:
+                    summary = await generate_session_summary(chat, session_data)
+                    await websocket.send_json({"type": "SESSION_SUMMARY", "data": summary})
+                except Exception as e:
+                    print(f"Error during summary generation: {e}")
+                    summary = build_fallback_summary(session_data)
+                    await websocket.send_json({"type": "SESSION_SUMMARY", "data": summary})
+                await websocket.send_json({"type": "SESSION_ENDED"})
+                break
+
             if message_type != "VIDEO_FRAME":
                 print(f"Received non-video message, skipping: {message_type}")
                 continue
@@ -178,7 +311,7 @@ async def websocket_session(websocket: WebSocket):
             base64_image = message_json.get("data")
             if not base64_image:
                 continue
-            
+
             try:
                 image_bytes = base64.b64decode(base64_image)
                 image_part = {"mime_type": "image/jpeg", "data": image_bytes}
@@ -188,19 +321,30 @@ async def websocket_session(websocket: WebSocket):
 
             try:
                 print("Sending frame to Gemini...")
-                response = await chat_session.send_message_async(image_part, stream=False)
+                response = await chat.send_message_async(image_part, stream=False)
                 response_text = response.text
                 print(f"Received from Gemini: {response_text}")
 
                 analysis_data = json.loads(response_text)
-                
+
+                # Accumulate session data
+                status = analysis_data.get("status")
+                if status == "GREEN":
+                    session_data["green_count"] += 1
+                elif status == "RED":
+                    session_data["red_count"] += 1
+                if len(session_data["analyses"]) < 500:
+                    session_data["analyses"].append({
+                        "status": status,
+                        "speech_text": analysis_data.get("speech_text", ""),
+                    })
+
                 # Send Thought Signature
                 thought = analysis_data.get("thought_signature")
                 if thought:
                     await websocket.send_json({"type": "THOUGHT", "data": thought})
 
                 # Send Status
-                status = analysis_data.get("status")
                 if status:
                     await websocket.send_json({"type": "STATUS", "data": status})
 
@@ -219,19 +363,22 @@ async def websocket_session(websocket: WebSocket):
                 print(f"An unexpected error occurred during model communication: {e}")
                 await websocket.send_json({"type": "ERROR", "data": f"Model communication error: {e}"})
 
-
     except WebSocketDisconnect:
-        print("Client disconnected.")
+        print("Client disconnected (no END_SESSION received).")
     except Exception as e:
         print(f"An unexpected error occurred in the WebSocket session: {e}")
     finally:
-        print("Closing WebSocket connection.")
-        if not websocket.client_state == 'DISCONNECTED':
-            await websocket.close()
+        total = session_data["green_count"] + session_data["red_count"]
+        duration = time.time() - session_data["start_time"]
+        print(f"Session stats — duration: {int(duration)}s, frames: {total}, "
+              f"green: {session_data['green_count']}, red: {session_data['red_count']}")
+        try:
+            if not websocket.client_state == 'DISCONNECTED':
+                await websocket.close()
+        except Exception:
+            pass  # connection already closed
 
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
-
-    
