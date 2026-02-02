@@ -9,7 +9,7 @@ export type ThoughtLog = {
     text: string;
 };
 
-export type FormStatus = "idle" | "good" | "bad" | "yellow" | "waiting";
+export type FormStatus = "idle" | "green" | "red" | "yellow" | "waiting";
 
 export function useGeminiSession() {
     const [isConnected, setIsConnected] = useState(false);
@@ -57,11 +57,9 @@ export function useGeminiSession() {
                         setThoughtLogs((prevLogs) => [...prevLogs, { timestamp: Date.now(), text: message.data }]);
                     } else if (message.type === 'STATUS' && message.data) {
                         const status = message.data.toLowerCase();
-                        if (status === 'green') setLatestStatus('good');
-                        else if (status === 'red') setLatestStatus('bad');
-                        else if (status === 'yellow') setLatestStatus('yellow');
-                        else if (status === 'waiting') setLatestStatus('waiting');
-
+                        if (status === 'green' || status === 'red' || status === 'yellow' || status === 'waiting') {
+                            setLatestStatus(status as FormStatus);
+                        }
                     } else if (message.type === 'SPEECH_TEXT' && message.data) {
                         setLatestSpeechText(message.data);
                     } else if (message.type === 'SPEECH' && message.data) {
@@ -94,8 +92,9 @@ export function useGeminiSession() {
         };
 
         socket.onerror = (event) => {
-            console.error(`WebSocket error attempting to connect to: ${WEBSOCKET_URL}`);
-            setError(`Connection failed. Check if the backend is running at ${WEBSOCKET_URL}.`);
+            const errorMessage = `Connection failed. Check if the backend is running at ${WEBSOCKET_URL}.`;
+            console.error(`WebSocket error: ${errorMessage}`);
+            setError(errorMessage);
             setIsConnected(false);
             setIsProcessing(false);
         };
@@ -202,5 +201,3 @@ export function useGeminiSession() {
 
     return { isConnected, thoughtLogs, error, sendFrame, latestStatus, latestSpeechText, isProcessing, sessionSummary, endSession, resetSession, connect };
 }
-
-    

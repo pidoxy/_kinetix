@@ -8,9 +8,9 @@ interface SkeletonOverlayProps {
 
 const statusConfig: Record<FormStatus, { strokeColor: string; jointColor: string; strokeWidth: number; opacity: number; className?: string }> = {
     idle: { strokeColor: "#00FFFF", jointColor: "#FFFFFF", strokeWidth: 2, opacity: 0.8 },
-    good: { strokeColor: "#00FF00", jointColor: "#FFFFFF", strokeWidth: 2, opacity: 0.9 },
+    green: { strokeColor: "#00FF00", jointColor: "#FFFFFF", strokeWidth: 2, opacity: 0.9 },
     yellow: { strokeColor: "#FFFF00", jointColor: "#FFFFFF", strokeWidth: 3, opacity: 1 },
-    bad: { strokeColor: "#FF0000", jointColor: "#FFFFFF", strokeWidth: 4, opacity: 1, className: "animate-pulse" },
+    red: { strokeColor: "#FF0000", jointColor: "#FFFFFF", strokeWidth: 4, opacity: 1, className: "animate-pulse" },
     waiting: { strokeColor: "#00FFFF", jointColor: "#FFFFFF", strokeWidth: 2, opacity: 0.3 },
 };
 
@@ -68,5 +68,3 @@ export function SkeletonOverlay({ status }: SkeletonOverlayProps) {
     </div>
   );
 }
-
-    

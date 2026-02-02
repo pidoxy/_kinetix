@@ -9,9 +9,9 @@ interface StatusBadgeProps {
 
 const statusConfig: Record<FormStatus, { text: string; className: string }> = {
   idle: { text: 'STARTING...', className: 'bg-slate-600/80 text-white' },
-  good: { text: 'GOOD FORM', className: 'bg-green-500/90 text-white' },
+  green: { text: 'GOOD FORM', className: 'bg-green-500/90 text-white' },
   yellow: { text: 'ALMOST THERE', className: 'bg-yellow-500/90 text-white' },
-  bad: { text: 'CORRECTION NEEDED', className: 'bg-red-500/90 text-white animate-pulse' },
+  red: { text: 'CORRECTION NEEDED', className: 'bg-red-500/90 text-white animate-pulse' },
   waiting: { text: 'ADJUSTING...', className: 'bg-sky-600/90 text-white' },
 };
 
@@ -34,5 +34,3 @@ export const StatusBadge = ({ status }: StatusBadgeProps) => {
     </div>
   );
 };
-
-    

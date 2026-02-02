@@ -29,8 +29,8 @@ export const SpeechTextOverlay = ({ text, status }: SpeechTextOverlayProps) => {
 
   const statusClasses: Record<FormStatus, string> = {
     idle: 'bg-black/30',
-    good: 'bg-green-600/80',
-    bad: 'bg-red-600/80',
+    green: 'bg-green-600/80',
+    red: 'bg-red-600/80',
     yellow: 'bg-yellow-600/80',
     waiting: 'bg-slate-600/80',
   };
@@ -57,5 +57,3 @@ export const SpeechTextOverlay = ({ text, status }: SpeechTextOverlayProps) => {
     </div>
   );
 };
-
-    

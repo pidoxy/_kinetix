@@ -55,8 +55,8 @@ export const ActiveSession = ({
 
     const glowClasses: Record<FormStatus, string> = {
         idle: '',
-        good: 'shadow-green-glow',
-        bad: 'shadow-red-glow',
+        green: 'shadow-green-glow',
+        red: 'shadow-red-glow',
         yellow: 'shadow-yellow-glow',
         waiting: 'shadow-gray-glow'
     };
@@ -84,5 +84,3 @@ export const ActiveSession = ({
         </div>
     );
 }
-
-    
