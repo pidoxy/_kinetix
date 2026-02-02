@@ -9,13 +9,14 @@ export type ThoughtLog = {
     text: string;
 };
 
-export type FormStatus = "idle" | "good" | "bad";
+export type FormStatus = "idle" | "good" | "bad" | "yellow" | "waiting";
 
 export function useGeminiSession() {
     const [isConnected, setIsConnected] = useState(false);
     const [thoughtLogs, setThoughtLogs] = useState<ThoughtLog[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [latestStatus, setLatestStatus] = useState<FormStatus>("idle");
+    const [latestSpeechText, setLatestSpeechText] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [sessionSummary, setSessionSummary] = useState<any | null>(null);
     
@@ -32,6 +33,7 @@ export function useGeminiSession() {
             return;
         }
 
+        console.log(`Attempting to connect to WebSocket at ${WEBSOCKET_URL}...`);
         const socket = new WebSocket(WEBSOCKET_URL);
         ws.current = socket;
 
@@ -55,11 +57,13 @@ export function useGeminiSession() {
                         setThoughtLogs((prevLogs) => [...prevLogs, { timestamp: Date.now(), text: message.data }]);
                     } else if (message.type === 'STATUS' && message.data) {
                         const status = message.data.toLowerCase();
-                        if (status === 'green') {
-                            setLatestStatus('good');
-                        } else if (status === 'red') {
-                            setLatestStatus('bad');
-                        }
+                        if (status === 'green') setLatestStatus('good');
+                        else if (status === 'red') setLatestStatus('bad');
+                        else if (status === 'yellow') setLatestStatus('yellow');
+                        else if (status === 'waiting') setLatestStatus('waiting');
+
+                    } else if (message.type === 'SPEECH_TEXT' && message.data) {
+                        setLatestSpeechText(message.data);
                     } else if (message.type === 'SPEECH' && message.data) {
                         try {
                             const audioData = atob(message.data);
@@ -93,6 +97,7 @@ export function useGeminiSession() {
             console.error(`WebSocket error attempting to connect to: ${WEBSOCKET_URL}`);
             setError(`Connection failed. Check if the backend is running at ${WEBSOCKET_URL}.`);
             setIsConnected(false);
+            setIsProcessing(false);
         };
 
         socket.onclose = () => {
@@ -120,9 +125,6 @@ export function useGeminiSession() {
                 setError("Audio is not supported by this browser.");
             }
         }
-        
-        // Don't auto-connect on load, let the user start the session.
-        // connect();
 
         return () => {
             if (reconnectTimeout.current) {
@@ -191,10 +193,14 @@ export function useGeminiSession() {
     const resetSession = () => {
         setThoughtLogs([]);
         setLatestStatus('idle');
+        setLatestSpeechText(null);
         setError(null);
         setSessionSummary(null);
+        setIsProcessing(false);
         connect();
     };
 
-    return { isConnected, thoughtLogs, error, sendFrame, latestStatus, isProcessing, sessionSummary, endSession, resetSession, connect };
+    return { isConnected, thoughtLogs, error, sendFrame, latestStatus, latestSpeechText, isProcessing, sessionSummary, endSession, resetSession, connect };
 }
+
+    

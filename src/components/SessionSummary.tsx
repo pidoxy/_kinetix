@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Award, BarChart, Sparkles, Target, ThumbsUp, TrendingUp } from 'lucide-react';
+import { Award, BarChart, Sparkles, Target, ThumbsUp, TrendingUp, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
@@ -41,7 +41,7 @@ export function SessionSummary({ summary, onClose }: SessionSummaryProps) {
 
     return (
         <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-slate-950/80 animate-fade-in p-4">
-            <Card className="max-w-3xl w-full bg-card/80 backdrop-blur-md border-primary/30 shadow-cyan-glow">
+            <Card className="max-w-4xl w-full bg-card/80 backdrop-blur-md border-primary/30 shadow-cyan-glow">
                 <CardHeader>
                     <div className="flex justify-between items-start">
                         <div className="flex items-center gap-4">
@@ -57,20 +57,24 @@ export function SessionSummary({ summary, onClose }: SessionSummaryProps) {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <ScrollArea className="h-80 pr-6">
+                    <ScrollArea className="h-96 pr-6">
                         <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
                                 <div className="bg-slate-900/50 p-3 rounded-lg">
                                     <p className="text-sm text-slate-400">Duration</p>
                                     <p className="text-2xl font-bold">{summary.session_duration_formatted}</p>
                                 </div>
-                                <div className="bg-slate-900/50 p-3 rounded-lg">
-                                    <p className="text-sm text-slate-400">Frames Analyzed</p>
-                                    <p className="text-2xl font-bold">{summary.total_frames_analyzed}</p>
+                                <div className="bg-green-900/40 p-3 rounded-lg flex flex-col items-center gap-1">
+                                    <div className="flex items-center gap-2 text-sm text-green-300"><CheckCircle className="h-4 w-4" /> Good</div>
+                                    <p className="text-2xl font-bold">{form_score.green_count}</p>
                                 </div>
-                                <div className="bg-slate-900/50 p-3 rounded-lg">
-                                    <p className="text-sm text-slate-400">Good Form</p>
-                                    <p className="text-2xl font-bold">{form_score.green_percentage}%</p>
+                                <div className="bg-yellow-900/40 p-3 rounded-lg flex flex-col items-center gap-1">
+                                     <div className="flex items-center gap-2 text-sm text-yellow-300"><AlertTriangle className="h-4 w-4" /> Almost</div>
+                                    <p className="text-2xl font-bold">{form_score.yellow_count}</p>
+                                </div>
+                                 <div className="bg-red-900/40 p-3 rounded-lg flex flex-col items-center gap-1">
+                                     <div className="flex items-center gap-2 text-sm text-red-300"><XCircle className="h-4 w-4" /> Corrections</div>
+                                    <p className="text-2xl font-bold">{form_score.red_count}</p>
                                 </div>
                             </div>
                             
@@ -129,3 +133,5 @@ export function SessionSummary({ summary, onClose }: SessionSummaryProps) {
         </div>
     );
 }
+
+    

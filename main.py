@@ -32,65 +32,75 @@ TTS_MODEL_NAME = "models/text-to-speech"
 
 # The system instruction for the AI model
 SYSTEM_INSTRUCTION = """
-You are Kinetix, a world-class biomechanics coach and physical therapy assistant.
-Your goal is to provide real-time, actionable feedback to users performing exercises.
-You will receive a stream of video frames from the user's camera.
-For each frame, you must analyze the user's posture, form, and movement.
+You are Kinetix, an expert movement coach designed for non-experts.
 
-Based on your analysis, you MUST return a single, valid JSON object with the following fields:
-- "thought_signature": A brief, technical, and analytical thought process about the user's current form. This is your internal monologue, like a signature on an analysis. Use biomechanical terms.
-- "status": A single word indicating the quality of the user's form. It must be either "GREEN" for good form or "RED" for poor form that requires correction.
-- "speech_text": A concise, encouraging, and clear instruction for the user to either maintain their form or correct it. This text will be converted to speech. Keep it under 15 words.
+INPUT: Real-time video frames of a user exercising.
+OUTPUT: A single valid JSON object (no markdown).
 
-IMPORTANT: If the user's full body is not visible (too close, partially out of frame, etc.), do NOT over-explain this technically. Simply tell them to step back or adjust their camera. Provide your best analysis with whatever IS visible rather than refusing to analyze. Only use "RED" for actual form problems, not for camera positioning.
+YOUR DUAL ROLE:
+1. THE ANALYST (Internal): Analyze biomechanics using precise medical terminology. Identify risks using proper anatomical terms (valgus, kyphosis, lordosis, protraction, etc.). This goes into "thought_signature".
+2. THE COACH (External): Translate your analysis into simple, punchy, 5th-grade reading level commands. Use METAPHORS and ANALOGIES. This goes into "speech_text".
 
-Example for good form:
+RULES FOR "speech_text":
+- NEVER use medical words: valgus, kyphosis, lordosis, protraction, extension, flexion, scapular, cervical, thoracic, lumbar, anterior, posterior.
+- ALWAYS use simple cues: "Chest up", "Knees out", "Squeeze your glutes", "Chin down", "Show me the logo on your shirt".
+- Keep it under 10 words. The user is out of breath.
+- If form is dangerous (RED), start with "Stop!" or "Careful!".
+- If form is good (GREEN), be encouraging: "Perfect!", "Nailed it!", "Just like that!".
+- If form is slightly off (YELLOW), be gentle: "Almost!", "Try to...".
+
+STATUS VALUES:
+- "GREEN": Form is within safe, optimal range. No correction needed.
+- "YELLOW": Minor deviation. Not dangerous, but could be better. Gentle nudge.
+- "RED": Dangerous form. Risk of injury. Urgent correction needed.
+- "WAITING": You cannot see the user clearly (blurry, out of frame, too dark). Tell them exactly why and how to fix it.
+
+CONFIDENCE RULE:
+If the video is blurry, the user is partially out of frame, or you cannot confidently assess form, you MUST use status "WAITING". Do NOT guess. Tell the user exactly what to fix: "I can't see your hips. Step back a bit." or "The camera is too dark. Find better lighting."
+
+JSON FORMAT:
 {
-  "thought_signature": "Spine is neutral, core is engaged. Squat depth is adequate, knees tracking over toes. No valgus collapse detected.",
-  "status": "GREEN",
-  "speech_text": "Great form! Keep this pace."
+  "thought_signature": "Technical analysis for logs (e.g., 'L4-L5 shear force risk due to lumbar flexion under load').",
+  "status": "GREEN" | "YELLOW" | "RED" | "WAITING",
+  "speech_text": "Simple cue for the user (e.g., 'Stick your butt out more!')."
 }
 
-Example for poor form:
-{
-  "thought_signature": "Thoracic flexion increasing, lumbar stability compromised. Knees caving inward (valgus collapse). Injury risk elevated.",
-  "status": "RED",
-  "speech_text": "Stop. Straighten your back and keep your knees out."
-}
+TRANSLATION EXAMPLES:
+- Knee Cave: thought="Valgus collapse detected on eccentric phase." → speech="Push your knees out sideways!"
+- Rounded Back: thought="Thoracic kyphosis exceeding 40 degrees." → speech="Chest up! Show me the logo on your shirt."
+- Arched Back: thought="Lumbar hyperextension with anterior pelvic tilt." → speech="Tuck your tailbone. Squeeze your abs."
+- Head Forward: thought="Cervical protraction." → speech="Tuck your chin like you're making a double chin."
+- Shrugging: thought="Scapular elevation active." → speech="Relax your shoulders down, away from your ears."
+- Good Form: thought="Kinematic alignment within optimal range." → speech="Perfect. Make the next rep look exactly like that."
+- Can't See: thought="Frame quality insufficient for reliable analysis." → speech="I can't see your legs. Step back from the camera."
 
-Example when user is too close or partially visible:
-{
-  "thought_signature": "Only upper body visible. Shoulder alignment and thoracic posture appear sound from current view.",
-  "status": "GREEN",
-  "speech_text": "Step back so I can see your full body."
-}
-
-Analyze each frame independently and provide immediate, relevant feedback.
-Do not include markdown formatting in your response.
-Your entire response must be a single, valid JSON object.
+Analyze each frame independently. Your entire response must be a single valid JSON object.
 """
 
 SUMMARY_PROMPT_TEMPLATE = """
-The exercise session has now ended. Here are the session statistics:
+The exercise session has ended. Here are the stats:
 
 - Duration: {duration_formatted} ({duration_seconds} seconds)
 - Total frames analyzed: {total_frames}
 - Good form (GREEN): {green_count} ({green_percentage:.1f}%)
+- Needs tweaking (YELLOW): {yellow_count}
 - Poor form (RED): {red_count} ({red_percentage:.1f}%)
 - Form rating: {rating}
 - Top corrections given: {top_corrections}
 
-Based on your analysis throughout this session, provide a summary in the following JSON format:
+You are now THE COACH. Write a session summary for the user in simple, encouraging language. NO medical jargon. Write like you're talking to a friend after their workout.
+
+Return a JSON object:
 {{
-  "overall_assessment": "2-3 sentence overall assessment of the user's performance",
-  "strengths": ["strength 1", "strength 2"],
-  "areas_for_improvement": ["area 1", "area 2"],
-  "recommendations": ["recommendation 1", "recommendation 2"],
-  "encouragement": "1 sentence of encouragement"
+  "overall_assessment": "2-3 sentences. Simple language. Mention specific things they did well and what to work on. Like a coach, not a doctor.",
+  "strengths": ["Simple strength descriptions, e.g. 'Kept your back straight through most reps'"],
+  "areas_for_improvement": ["Simple improvement descriptions, e.g. 'Knees were caving in during the bottom of your squat'"],
+  "recommendations": ["Actionable tips, e.g. 'Try squeezing a ball between your knees to practice keeping them out'"],
+  "encouragement": "1 sentence of genuine encouragement"
 }}
 
-Be specific and reference actual observations you made during the session.
-Your entire response must be a single valid JSON object matching the format above.
+Be specific. Reference what you actually saw. Keep everything at a 5th-grade reading level.
+Your entire response must be a single valid JSON object.
 """
 
 analysis_model = genai.GenerativeModel(
@@ -163,11 +173,11 @@ def _compute_rating(green_pct):
 
 
 def _get_top_corrections(analyses, max_items=5):
-    """Extract deduplicated correction texts from RED frames."""
+    """Extract deduplicated correction texts from RED and YELLOW frames."""
     seen = set()
     corrections = []
     for entry in analyses:
-        if entry.get("status") == "RED":
+        if entry.get("status") in ("RED", "YELLOW"):
             text = entry.get("speech_text", "")
             if text and text not in seen:
                 seen.add(text)
@@ -180,7 +190,7 @@ def _get_top_corrections(analyses, max_items=5):
 def build_fallback_summary(session_data):
     """Build a stats-only summary when Gemini is unavailable."""
     duration = time.time() - session_data["start_time"]
-    total = session_data["green_count"] + session_data["red_count"]
+    total = session_data["green_count"] + session_data["yellow_count"] + session_data["red_count"]
     green_pct = (session_data["green_count"] / total * 100) if total > 0 else 0.0
     minutes, seconds = divmod(int(duration), 60)
 
@@ -190,12 +200,13 @@ def build_fallback_summary(session_data):
         "total_frames_analyzed": total,
         "form_score": {
             "green_count": session_data["green_count"],
+            "yellow_count": session_data["yellow_count"],
             "red_count": session_data["red_count"],
             "green_percentage": round(green_pct, 1),
             "rating": _compute_rating(green_pct) if total > 0 else "NO_DATA",
         },
         "ai_summary": None,
-        "corrections_given": session_data["red_count"],
+        "corrections_given": session_data["red_count"] + session_data["yellow_count"],
         "top_corrections": _get_top_corrections(session_data["analyses"]),
     }
 
@@ -203,9 +214,9 @@ def build_fallback_summary(session_data):
 async def generate_session_summary(chat, session_data):
     """Generate a full session summary with AI narrative."""
     duration = time.time() - session_data["start_time"]
-    total = session_data["green_count"] + session_data["red_count"]
+    total = session_data["green_count"] + session_data["yellow_count"] + session_data["red_count"]
     green_pct = (session_data["green_count"] / total * 100) if total > 0 else 0.0
-    red_pct = 100.0 - green_pct if total > 0 else 0.0
+    red_pct = (session_data["red_count"] / total * 100) if total > 0 else 0.0
     minutes, seconds = divmod(int(duration), 60)
     duration_formatted = f"{minutes:02d}:{seconds:02d}"
     rating = _compute_rating(green_pct) if total > 0 else "NO_DATA"
@@ -217,12 +228,13 @@ async def generate_session_summary(chat, session_data):
         "total_frames_analyzed": total,
         "form_score": {
             "green_count": session_data["green_count"],
+            "yellow_count": session_data["yellow_count"],
             "red_count": session_data["red_count"],
             "green_percentage": round(green_pct, 1),
             "rating": rating,
         },
         "ai_summary": None,
-        "corrections_given": session_data["red_count"],
+        "corrections_given": session_data["red_count"] + session_data["yellow_count"],
         "top_corrections": top_corrections,
     }
 
@@ -245,6 +257,7 @@ async def generate_session_summary(chat, session_data):
             total_frames=total,
             green_count=session_data["green_count"],
             green_percentage=green_pct,
+            yellow_count=session_data["yellow_count"],
             red_count=session_data["red_count"],
             red_percentage=red_pct,
             rating=rating,
@@ -283,7 +296,9 @@ async def websocket_session(websocket: WebSocket):
     session_data = {
         "start_time": time.time(),
         "green_count": 0,
+        "yellow_count": 0,
         "red_count": 0,
+        "waiting_count": 0,
         "analyses": [],  # capped at 500 entries
     }
 
@@ -331,8 +346,13 @@ async def websocket_session(websocket: WebSocket):
                 status = analysis_data.get("status")
                 if status == "GREEN":
                     session_data["green_count"] += 1
+                elif status == "YELLOW":
+                    session_data["yellow_count"] += 1
                 elif status == "RED":
                     session_data["red_count"] += 1
+                elif status == "WAITING":
+                    session_data["waiting_count"] += 1
+
                 if len(session_data["analyses"]) < 500:
                     session_data["analyses"].append({
                         "status": status,
@@ -348,9 +368,10 @@ async def websocket_session(websocket: WebSocket):
                 if status:
                     await websocket.send_json({"type": "STATUS", "data": status})
 
-                # Generate and send speech
+                # Send speech text for display and generate audio
                 speech_text = analysis_data.get("speech_text")
                 if speech_text:
+                    await websocket.send_json({"type": "SPEECH_TEXT", "data": speech_text})
                     audio_base64 = await text_to_speech(speech_text)
                     if audio_base64:
                         await websocket.send_json({"type": "SPEECH", "data": audio_base64})
@@ -368,10 +389,11 @@ async def websocket_session(websocket: WebSocket):
     except Exception as e:
         print(f"An unexpected error occurred in the WebSocket session: {e}")
     finally:
-        total = session_data["green_count"] + session_data["red_count"]
+        total = session_data["green_count"] + session_data["yellow_count"] + session_data["red_count"]
         duration = time.time() - session_data["start_time"]
         print(f"Session stats — duration: {int(duration)}s, frames: {total}, "
-              f"green: {session_data['green_count']}, red: {session_data['red_count']}")
+              f"green: {session_data['green_count']}, yellow: {session_data['yellow_count']}, "
+              f"red: {session_data['red_count']}, waiting: {session_data['waiting_count']}")
         try:
             if not websocket.client_state == 'DISCONNECTED':
                 await websocket.close()
@@ -382,3 +404,5 @@ async def websocket_session(websocket: WebSocket):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
+
+    

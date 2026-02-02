@@ -1,15 +1,31 @@
-export function SkeletonOverlay() {
-  const strokeColor = "#00FFFF"; // Cyan
-  const jointColor = "#FFFFFF"; // White
+'use client';
+import { cn } from "@/lib/utils";
+import { FormStatus } from "@/hooks/useGeminiSession";
+
+interface SkeletonOverlayProps {
+  status: FormStatus;
+}
+
+const statusConfig: Record<FormStatus, { strokeColor: string; jointColor: string; strokeWidth: number; opacity: number; className?: string }> = {
+    idle: { strokeColor: "#00FFFF", jointColor: "#FFFFFF", strokeWidth: 2, opacity: 0.8 },
+    good: { strokeColor: "#00FF00", jointColor: "#FFFFFF", strokeWidth: 2, opacity: 0.9 },
+    yellow: { strokeColor: "#FFFF00", jointColor: "#FFFFFF", strokeWidth: 3, opacity: 1 },
+    bad: { strokeColor: "#FF0000", jointColor: "#FFFFFF", strokeWidth: 4, opacity: 1, className: "animate-pulse" },
+    waiting: { strokeColor: "#00FFFF", jointColor: "#FFFFFF", strokeWidth: 2, opacity: 0.3 },
+};
+
+
+export function SkeletonOverlay({ status }: SkeletonOverlayProps) {
+  const config = statusConfig[status];
   
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none" style={{ filter: 'drop-shadow(0 0 5px rgba(0, 255, 255, 0.7))' }}>
+    <div className={cn("absolute inset-0 z-10 flex items-center justify-center pointer-events-none", config.className)} style={{ filter: `drop-shadow(0 0 8px ${config.strokeColor}B3)` }}>
       <svg
         className="w-full h-full"
         viewBox="0 0 360 640"
         preserveAspectRatio="xMidYMid slice"
       >
-        <g stroke={strokeColor} strokeWidth="2" strokeLinecap="round" opacity="0.8">
+        <g stroke={config.strokeColor} strokeWidth={config.strokeWidth} strokeLinecap="round" opacity={config.opacity} className="transition-all duration-300">
           {/* Head */}
           <circle cx="180" cy="160" r="15" fill="none" />
           {/* Spine */}
@@ -32,21 +48,25 @@ export function SkeletonOverlay() {
           <line x1="210" y1="420" x2="220" y2="520" />
 
           {/* Joints */}
-          <circle cx="180" cy="175" r="3" fill={jointColor} /> {/* Neck */}
-          <circle cx="140" cy="200" r="3" fill={jointColor} /> {/* L Shoulder */}
-          <circle cx="220" cy="200" r="3" fill={jointColor} /> {/* R Shoulder */}
-          <circle cx="120" cy="280" r="3" fill={jointColor} /> {/* L Elbow */}
-          <circle cx="240" cy="280" r="3" fill={jointColor} /> {/* R Elbow */}
-          <circle cx="100" cy="360" r="3" fill={jointColor} /> {/* L Wrist */}
-          <circle cx="260" cy="360" r="3" fill={jointColor} /> {/* R Wrist */}
-          <circle cx="160" cy="320" r="3" fill={jointColor} /> {/* L Hip */}
-          <circle cx="200" cy="320" r="3" fill={jointColor} /> {/* R Hip */}
-          <circle cx="150" cy="420" r="3" fill={jointColor} /> {/* L Knee */}
-          <circle cx="210" cy="420" r="3" fill={jointColor} /> {/* R Knee */}
-          <circle cx="140" cy="520" r="3" fill={jointColor} /> {/* L Ankle */}
-          <circle cx="220" y2="520" r="3" fill={jointColor} /> {/* R Ankle */}
+          <g fill={config.jointColor}>
+            <circle cx="180" cy="175" r="3" /> {/* Neck */}
+            <circle cx="140" cy="200" r="3" /> {/* L Shoulder */}
+            <circle cx="220" cy="200" r="3" /> {/* R Shoulder */}
+            <circle cx="120" cy="280" r="3" /> {/* L Elbow */}
+            <circle cx="240" cy="280" r="3" /> {/* R Elbow */}
+            <circle cx="100" cy="360" r="3" /> {/* L Wrist */}
+            <circle cx="260" cy="360" r="3" /> {/* R Wrist */}
+            <circle cx="160" cy="320" r="3" /> {/* L Hip */}
+            <circle cx="200" cy="320" r="3" /> {/* R Hip */}
+            <circle cx="150" cy="420" r="3" /> {/* L Knee */}
+            <circle cx="210" cy="420" r="3" /> {/* R Knee */}
+            <circle cx="140" cy="520" r="3" /> {/* L Ankle */}
+            <circle cx="220" cy="520" r="3" /> {/* R Ankle */}
+          </g>
         </g>
       </svg>
     </div>
   );
 }
+
+    

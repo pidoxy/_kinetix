@@ -72,7 +72,10 @@ export default {
       },
       boxShadow: {
         'cyan-glow': '0 0 25px -5px hsl(var(--primary) / 0.6), 0 0 15px -6px hsl(var(--primary) / 0.5)',
-        'red-glow': '0 0 25px -5px hsl(var(--destructive) / 0.6), 0 0 15px -6px hsl(var(--destructive) / 0.5)',
+        'red-glow': 'inset 0 0 20px 5px hsl(var(--destructive) / 0.4)',
+        'green-glow': 'inset 0 0 20px 5px hsl(120 80% 40% / 0.4)',
+        'yellow-glow': 'inset 0 0 20px 5px hsl(48 96% 50% / 0.4)',
+        'gray-glow': 'inset 0 0 20px 5px hsl(210 15% 50% / 0.4)',
       },
       keyframes: {
         'accordion-down': {
@@ -112,3 +115,5 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
+
+    
