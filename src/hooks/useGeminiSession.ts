@@ -95,7 +95,6 @@ export function useGeminiSession() {
 
         socket.onerror = (event) => {
             const errorMessage = `Connection failed. Check if the backend is running at ${WEBSOCKET_URL}.`;
-            console.error(`WebSocket error: ${errorMessage}`);
             setError(errorMessage);
             setIsConnected(false);
             setIsProcessing(false);
