@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Award, BarChart, Sparkles, Target, ThumbsUp, TrendingUp, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { Award, BarChart, Sparkles, Target, ThumbsUp, TrendingUp, CheckCircle, AlertTriangle, XCircle, Dumbbell } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
@@ -35,7 +35,7 @@ const SummaryListItem = ({ icon: Icon, title, items }: { icon: React.ElementType
 
 
 export function SessionSummary({ summary, onClose }: SessionSummaryProps) {
-    const { form_score, ai_summary, top_corrections } = summary;
+    const { form_score, ai_summary, top_corrections, personalized_recommendations } = summary;
     const rating = form_score?.rating || 'NO_DATA';
     const config = ratingConfig[rating as keyof typeof ratingConfig];
 
@@ -93,8 +93,25 @@ export function SessionSummary({ summary, onClose }: SessionSummaryProps) {
                                     
                                     {ai_summary.areas_for_improvement?.length > 0 && <SummaryListItem icon={Target} title="Areas For Improvement" items={ai_summary.areas_for_improvement} />}
 
-                                    {ai_summary.recommendations?.length > 0 && <SummaryListItem icon={TrendingUp} title="Recommendations" items={ai_summary.recommendations} />}
+                                    {ai_summary.recommendations?.length > 0 && <SummaryListItem icon={TrendingUp} title="Coach's Tips" items={ai_summary.recommendations} />}
                                     
+                                    {personalized_recommendations && personalized_recommendations.length > 0 && (
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Dumbbell className="h-5 w-5 text-primary" />
+                                                <h3 className="font-semibold text-lg text-slate-200">Recommended Exercises</h3>
+                                            </div>
+                                            <ul className="space-y-2.5 pl-8 text-slate-300">
+                                                {personalized_recommendations.map((rec: any, index: number) => (
+                                                    <li key={index}>
+                                                        <p className="font-semibold text-slate-100">{rec.name}</p>
+                                                        <p className="text-sm text-slate-400">{rec.description}</p>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+
                                     <div className="pt-2">
                                         <div className="flex items-center gap-2 mb-2">
                                             <Sparkles className="h-5 w-5 text-yellow-400" />
@@ -133,5 +150,3 @@ export function SessionSummary({ summary, onClose }: SessionSummaryProps) {
         </div>
     );
 }
-
-    

@@ -103,6 +103,35 @@ Be specific. Reference what you actually saw. Keep everything at a 5th-grade rea
 Your entire response must be a single valid JSON object.
 """
 
+RECOMMENDATION_PROMPT_TEMPLATE = """
+You are an expert personal trainer. Based on the user's identified areas for improvement from their last workout, suggest 2-3 specific, corrective exercises.
+
+AREAS FOR IMPROVEMENT:
+- {areas_for_improvement}
+
+For each exercise, provide a name and a brief, simple explanation of why it helps.
+Return a JSON object with a single key "recommendations", which is an array of objects.
+
+JSON FORMAT:
+{{
+  "recommendations": [
+    {{ "name": "Exercise Name", "description": "Simple description of why this exercise is helpful." }},
+    ...
+  ]
+}}
+
+Example:
+{{
+  "recommendations": [
+    {{ "name": "Glute Bridges", "description": "Strengthens your glutes to help keep your knees from caving in." }},
+    {{ "name": "Banded Side Steps", "description": "Activates the muscles on the outside of your hips for better stability." }}
+  ]
+}}
+
+Your entire response must be a single valid JSON object.
+"""
+
+
 analysis_model = genai.GenerativeModel(
     ANALYSIS_MODEL_NAME,
     system_instruction=SYSTEM_INSTRUCTION,
@@ -206,6 +235,7 @@ def build_fallback_summary(session_data):
             "rating": _compute_rating(green_pct) if total > 0 else "NO_DATA",
         },
         "ai_summary": None,
+        "personalized_recommendations": [],
         "corrections_given": session_data["red_count"] + session_data["yellow_count"],
         "top_corrections": _get_top_corrections(session_data["analyses"]),
     }
@@ -234,6 +264,7 @@ async def generate_session_summary(chat, session_data):
             "rating": rating,
         },
         "ai_summary": None,
+        "personalized_recommendations": [],
         "corrections_given": session_data["red_count"] + session_data["yellow_count"],
         "top_corrections": top_corrections,
     }
@@ -276,6 +307,30 @@ async def generate_session_summary(chat, session_data):
             "recommendations": ai_summary.get("recommendations", []),
             "encouragement": ai_summary.get("encouragement", ""),
         }
+        
+        # Generate personalized recommendations
+        try:
+            if "areas_for_improvement" in ai_summary and ai_summary["areas_for_improvement"]:
+                areas_str = ", ".join(ai_summary["areas_for_improvement"])
+                rec_prompt = RECOMMENDATION_PROMPT_TEMPLATE.format(areas_for_improvement=areas_str)
+                
+                rec_model = genai.GenerativeModel(
+                    ANALYSIS_MODEL_NAME,
+                    generation_config={ "response_mime_type": "application/json" }
+                )
+                
+                rec_response = await rec_model.generate_content_async(rec_prompt)
+                rec_response_text = rec_response.text
+                print(f"Recommendation response from Gemini: {rec_response_text}")
+
+                rec_data = json.loads(rec_response_text)
+                if "recommendations" in rec_data:
+                    base_summary["personalized_recommendations"] = rec_data["recommendations"]
+
+        except Exception as e:
+            print(f"Could not generate personalized recommendations: {e}")
+            # personalized_recommendations will remain an empty list
+            
     except Exception as e:
         print(f"Error generating AI summary: {e}")
         # ai_summary stays None — fallback to stats-only
