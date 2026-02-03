@@ -14,6 +14,7 @@ export type FormStatus = "idle" | "green" | "red" | "yellow" | "waiting";
 export function useGeminiSession() {
     const [isConnected, setIsConnected] = useState(false);
     const [thoughtLogs, setThoughtLogs] = useState<ThoughtLog[]>([]);
+    const [speechLogs, setSpeechLogs] = useState<ThoughtLog[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [latestStatus, setLatestStatus] = useState<FormStatus>("idle");
     const [latestSpeechText, setLatestSpeechText] = useState<string | null>(null);
@@ -62,6 +63,7 @@ export function useGeminiSession() {
                         }
                     } else if (message.type === 'SPEECH_TEXT' && message.data) {
                         setLatestSpeechText(message.data);
+                        setSpeechLogs((prevLogs) => [...prevLogs, { timestamp: Date.now(), text: message.data }]);
                     } else if (message.type === 'SPEECH' && message.data) {
                         try {
                             const audioData = atob(message.data);
@@ -191,6 +193,7 @@ export function useGeminiSession() {
     
     const resetSession = () => {
         setThoughtLogs([]);
+        setSpeechLogs([]);
         setLatestStatus('idle');
         setLatestSpeechText(null);
         setError(null);
@@ -199,5 +202,5 @@ export function useGeminiSession() {
         connect();
     };
 
-    return { isConnected, thoughtLogs, error, sendFrame, latestStatus, latestSpeechText, isProcessing, sessionSummary, endSession, resetSession, connect };
+    return { isConnected, thoughtLogs, speechLogs, error, sendFrame, latestStatus, latestSpeechText, isProcessing, sessionSummary, endSession, resetSession, connect };
 }

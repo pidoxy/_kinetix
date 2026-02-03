@@ -17,6 +17,7 @@ interface ActiveSessionProps {
     facingMode: string;
     isConnected: boolean;
     thoughtLogs: ThoughtLog[];
+    speechLogs: ThoughtLog[];
     error: string | null;
     sendFrame: (frame: string) => void;
     latestStatus: FormStatus;
@@ -29,6 +30,7 @@ export const ActiveSession = ({
     facingMode,
     isConnected,
     thoughtLogs,
+    speechLogs,
     error,
     sendFrame,
     latestStatus,
@@ -80,7 +82,7 @@ export const ActiveSession = ({
                     <SpeechTextOverlay text={latestSpeechText} status={latestStatus} />
                 </div>
             </div>
-            <BrainSidebar logs={thoughtLogs} error={error} latestSpeechText={latestSpeechText} />
+            <BrainSidebar thoughtLogs={thoughtLogs} speechLogs={speechLogs} error={error} />
         </div>
     );
 }

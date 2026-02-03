@@ -9,14 +9,14 @@ import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 
 type BrainSidebarProps = {
-    logs: ThoughtLog[],
+    thoughtLogs: ThoughtLog[],
+    speechLogs: ThoughtLog[],
     error: string | null,
-    latestSpeechText: string | null
 };
 
 type ViewMode = 'simple' | 'pro';
 
-export const BrainSidebar = ({ logs, error, latestSpeechText }: BrainSidebarProps) => {
+export const BrainSidebar = ({ thoughtLogs, speechLogs, error }: BrainSidebarProps) => {
     const [isCollapsed, setIsCollapsed] = useState(true);
     const [viewMode, setViewMode] = useState<ViewMode>('simple');
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -25,19 +25,11 @@ export const BrainSidebar = ({ logs, error, latestSpeechText }: BrainSidebarProp
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [logs, isCollapsed]);
+    }, [thoughtLogs, speechLogs, isCollapsed, viewMode]);
 
-    const renderSimpleMode = () => (
-        <div className="flex-grow flex items-center justify-center p-4">
-            <p className="text-2xl font-semibold text-center text-slate-300 italic">
-                {latestSpeechText || "Waiting for coach's instruction..."}
-            </p>
-        </div>
-    );
-
-    const renderProMode = () => (
-        <div ref={scrollRef} className="font-mono text-xs text-green-400 flex-grow overflow-y-auto space-y-2 pr-2">
-            {error && (
+    const renderLog = (logs: ThoughtLog[], className: string) => (
+        <div ref={scrollRef} className={cn("font-mono text-xs flex-grow overflow-y-auto space-y-2 pr-2", className)}>
+             {error && (
                 <Alert variant="destructive">
                     <AlertTitle>Connection Error</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
@@ -84,7 +76,7 @@ export const BrainSidebar = ({ logs, error, latestSpeechText }: BrainSidebarProp
                     className="flex-1" 
                     onClick={() => setViewMode('simple')}
                 >
-                    <BookOpen className="mr-2 h-4 w-4"/> Coach View
+                    <BookOpen className="mr-2 h-4 w-4"/> Coach Log
                 </Button>
                 <Button 
                     size="sm" 
@@ -92,15 +84,16 @@ export const BrainSidebar = ({ logs, error, latestSpeechText }: BrainSidebarProp
                     className="flex-1"
                     onClick={() => setViewMode('pro')}
                 >
-                   <SlidersHorizontal className="mr-2 h-4 w-4"/> Pro View
+                   <SlidersHorizontal className="mr-2 h-4 w-4"/> Pro Log
                 </Button>
             </div>
 
             <Separator className="mb-4 bg-white/10" />
 
-            {viewMode === 'simple' ? renderSimpleMode() : renderProMode()}
+            {viewMode === 'simple' 
+                ? renderLog(speechLogs, "text-slate-300") 
+                : renderLog(thoughtLogs, "text-green-400")
+            }
         </div>
     );
 };
-
-    

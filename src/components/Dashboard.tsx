@@ -36,6 +36,7 @@ export default function Dashboard() {
     const { 
         isConnected, 
         thoughtLogs, 
+        speechLogs,
         error, 
         sendFrame, 
         latestStatus,
@@ -90,6 +91,7 @@ export default function Dashboard() {
                         facingMode={facingMode}
                         isConnected={isConnected}
                         thoughtLogs={thoughtLogs}
+                        speechLogs={speechLogs}
                         error={error}
                         sendFrame={sendFrame}
                         latestStatus={latestStatus}
@@ -165,5 +167,3 @@ export default function Dashboard() {
         </div>
     );
 }
-
-    
