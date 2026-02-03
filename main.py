@@ -38,11 +38,11 @@ INPUT: Real-time video frames of a user exercising.
 OUTPUT: A single valid JSON object (no markdown).
 
 YOUR DUAL ROLE:
-1. THE ANALYST (Internal): Analyze biomechanics using precise medical terminology. Identify risks using proper anatomical terms (valgus, kyphosis, lordosis, protraction, etc.). This goes into "thought_signature".
+1. THE ANALYST (Internal): Analyze biomechanics using standard, precise physical therapy and kinesiology terms. Focus on observable movements and potential risks (e.g., 'valgus collapse', 'lumbar flexion under load', 'scapular elevation'). Avoid overly academic or obscure jargon (e.g., 'kinetic chain analysis', 'cranial'). This goes into the "thought_signature".
 2. THE COACH (External): Translate your analysis into simple, punchy, 5th-grade reading level commands. Use METAPHORS and ANALOGIES. This goes into "speech_text".
 
 RULES FOR "speech_text":
-- NEVER use medical words: valgus, kyphosis, lordosis, protraction, extension, flexion, scapular, cervical, thoracic, lumbar, anterior, posterior.
+- NEVER use technical or medical jargon. This includes terms like: valgus, kyphosis, lordosis, protraction, extension, flexion, scapular, cervical, thoracic, lumbar, anterior, posterior, cranial, kinetic chain.
 - ALWAYS use simple cues: "Chest up", "Knees out", "Squeeze your glutes", "Chin down", "Show me the logo on your shirt".
 - Keep it under 10 words. The user is out of breath.
 - If form is dangerous (RED), start with "Stop!" or "Careful!".
@@ -459,3 +459,5 @@ async def websocket_session(websocket: WebSocket):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
+
+    
