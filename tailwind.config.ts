@@ -47,23 +47,6 @@ export default {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
-        chart: {
-          '1': 'hsl(var(--chart-1))',
-          '2': 'hsl(var(--chart-2))',
-          '3': 'hsl(var(--chart-3))',
-          '4': 'hsl(var(--chart-4))',
-          '5': 'hsl(var(--chart-5))',
-        },
-        sidebar: {
-          DEFAULT: 'hsl(var(--sidebar-background))',
-          foreground: 'hsl(var(--sidebar-foreground))',
-          primary: 'hsl(var(--sidebar-primary))',
-          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-          accent: 'hsl(var(--sidebar-accent))',
-          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-          border: 'hsl(var(--sidebar-border))',
-          ring: 'hsl(var(--sidebar-ring))',
-        },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -72,10 +55,10 @@ export default {
       },
       boxShadow: {
         'cyan-glow': '0 0 25px -5px hsl(var(--primary) / 0.6), 0 0 15px -6px hsl(var(--primary) / 0.5)',
-        'red-glow': 'inset 0 0 20px 5px hsl(var(--destructive) / 0.4)',
-        'green-glow': 'inset 0 0 20px 5px hsl(120 80% 40% / 0.4)',
-        'yellow-glow': 'inset 0 0 20px 5px hsl(48 96% 50% / 0.4)',
-        'gray-glow': 'inset 0 0 20px 5px hsl(210 15% 50% / 0.4)',
+        'red-glow': 'inset 0 0 10px 2px hsl(var(--destructive) / 0.5)',
+        'green-glow': 'inset 0 0 10px 2px hsl(120 80% 40% / 0.5)',
+        'yellow-glow': 'inset 0 0 10px 2px hsl(48 96% 50% / 0.5)',
+        'gray-glow': 'inset 0 0 10px 2px hsl(210 15% 50% / 0.5)',
       },
       keyframes: {
         'accordion-down': {
@@ -115,5 +98,3 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
-
-    

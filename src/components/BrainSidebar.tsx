@@ -18,7 +18,7 @@ type ViewMode = 'simple' | 'pro';
 
 export const BrainSidebar = ({ thoughtLogs, speechLogs, error }: BrainSidebarProps) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [viewMode, setViewMode] = useState<ViewMode>('simple');
+    const [viewMode, setViewMode] = useState<ViewMode>('pro');
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {

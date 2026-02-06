@@ -2,16 +2,18 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Settings, Video, User, Square } from 'lucide-react';
-import { useGeminiSession, FormStatus } from '@/hooks/useGeminiSession';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Slider } from '@/components/ui/slider';
+import { Settings, Video, User, Square, Pause, Mic, Heart } from 'lucide-react';
+import { useGeminiSession } from '@/hooks/useGeminiSession';
 import { KinetixLogo } from './k-logo';
 import { Timer } from './Timer';
 
 import { ActiveSession } from './ActiveSession';
 import { IdleScreen } from './IdleScreen';
 import { SessionSummary } from './SessionSummary';
+import { AgentLog } from './AgentLog';
+import { ActiveMetricsSidebar } from './ActiveMetricsSidebar';
+import { StatusBadge } from './StatusBadge';
+
 
 const FACING_MODE_USER = "user";
 const FACING_MODE_ENVIRONMENT = "environment";
@@ -81,89 +83,68 @@ export default function Dashboard() {
     const isLive = sessionState === 'active' || sessionState === 'generating_summary';
 
     return (
-        <div className="flex flex-col h-screen bg-slate-950 text-slate-200 font-sans">
+        <div className="flex flex-col h-screen bg-background text-slate-200 font-sans">
+             <header className="flex items-center justify-between p-2 border-b border-border/50 shrink-0">
+                <KinetixLogo />
+                {sessionState === 'active' && (
+                    <div className="flex items-center gap-2 bg-card px-3 py-1.5 rounded-md text-cyan-400">
+                        <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
+                        </span>
+                        <Timer startTime={sessionStartTime || Date.now()} />
+                    </div>
+                )}
+                 <div className="flex items-center gap-2">
+                    {sessionState === 'active' && <StatusBadge status={latestStatus} />}
+                    <Button variant="ghost" size="icon"><Settings /></Button>
+                    <Button variant="ghost" size="icon"><User /></Button>
+                </div>
+            </header>
             
             <main className="flex-1 relative overflow-hidden flex items-center justify-center">
                 {sessionState === 'idle' && <IdleScreen onStart={handleStartSession} />}
-                {sessionState === 'active' && 
-                    <ActiveSession 
-                        frameInterval={frameInterval}
-                        facingMode={facingMode}
-                        isConnected={isConnected}
-                        thoughtLogs={thoughtLogs}
-                        speechLogs={speechLogs}
-                        error={error}
-                        sendFrame={sendFrame}
-                        latestStatus={latestStatus}
-                        latestSpeechText={latestSpeechText}
-                        isProcessing={isProcessing}
-                    />
-                }
                 {sessionState === 'generating_summary' && <GeneratingSummaryScreen />}
                 {sessionState === 'summary' && sessionSummary && <SessionSummary summary={sessionSummary} onClose={handleCloseSummary} />}
+                
+                {sessionState === 'active' && (
+                     <div className="w-full h-full flex">
+                        <ActiveMetricsSidebar status={latestStatus} />
+                        <ActiveSession 
+                            frameInterval={frameInterval}
+                            facingMode={facingMode}
+                            isConnected={isConnected}
+                            sendFrame={sendFrame}
+                            latestStatus={latestStatus}
+                            isProcessing={isProcessing}
+                        />
+                        <AgentLog logs={thoughtLogs} error={error} isProcessing={isProcessing} />
+                    </div>
+                )}
             </main>
 
-            <footer className="absolute bottom-0 left-0 right-0 z-30 flex items-center p-4 text-xs text-slate-400 shrink-0">
-                 {sessionState === 'active' ? (
-                    <div className="w-full flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-lg font-mono bg-black/30 px-4 py-2 rounded-lg">
-                           <span className="text-red-500 animate-pulse">&#9679;</span>
-                           <Timer startTime={sessionStartTime || Date.now()} />
+             {sessionState === 'active' && (
+                <footer className="flex items-center justify-between p-2 border-t border-border/50 shrink-0">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-card px-4 py-2 rounded-md text-center">
+                            <p className="text-xs text-slate-400">SESSION ACCURACY</p>
+                            <p className="text-lg font-bold text-cyan-400">-%</p>
                         </div>
-                         <Button
-                            onClick={handleStopSession}
-                            size="lg"
-                            variant="destructive"
-                            className="font-bold text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-red-glow transition-all duration-300 disabled:opacity-70"
-                            disabled={isProcessing && sessionState !== 'generating_summary'}
-                        >
-                            <Square className="mr-3" />
-                            {sessionState === 'generating_summary' ? 'GENERATING...' : 'END SESSION'}
-                        </Button>
-                        <div className="flex items-center gap-2">
-                             <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="bg-black/30 hover:bg-black/60"><Settings className="text-slate-300" /></Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80 mb-2">
-                                    <div className="grid gap-4">
-                                        <div className="space-y-2">
-                                            <h4 className="font-medium leading-none">Analysis Frequency</h4>
-                                            <p className="text-sm text-muted-foreground">
-                                                Set how often to analyze your form (in seconds). Higher is less intensive.
-                                            </p>
-                                        </div>
-                                        <Slider
-                                            id="frame-interval"
-                                            defaultValue={[frameInterval]}
-                                            max={10}
-                                            min={1}
-                                            step={1}
-                                            onValueChange={(value) => setFrameInterval(value[0])}
-                                            disabled={sessionState === 'active'}
-                                        />
-                                        <div className="flex justify-between text-xs text-muted-foreground">
-                                            <span>Fast (1s)</span>
-                                            <span>Slow (10s)</span>
-                                        </div>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                            <Button variant="ghost" size="icon" onClick={switchCamera} className="bg-black/30 hover:bg-black/60"><Video className="text-slate-300" /></Button>
+                         <div className="bg-card px-4 py-2 rounded-md text-center">
+                            <p className="text-xs text-slate-400">EST. CALORIES</p>
+                            <p className="text-lg font-bold">--</p>
                         </div>
                     </div>
-                ) : (sessionState === 'idle' || sessionState === 'summary') ? (
-                     <div className="w-full flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <KinetixLogo className="h-5 w-5" />
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <Button variant="link" className="text-slate-400 hover:text-primary p-0 h-auto">Help Center</Button>
-                            <Button variant="link" className="text-slate-400 hover:text-primary p-0 h-auto">Privacy Policy</Button>
-                        </div>
-                     </div>
-                ) : null}
-            </footer>
+                    <div className="flex items-center gap-2">
+                        <Button size="icon" variant="outline"><Pause /></Button>
+                        <Button onClick={handleStopSession} variant="destructive" className="font-bold px-6">
+                            <Square className="mr-2"/> END SESSION
+                        </Button>
+                        <Button size="icon" variant="outline"><Mic /></Button>
+                    </div>
+                     <div className="w-48"></div>
+                </footer>
+             )}
         </div>
     );
 }

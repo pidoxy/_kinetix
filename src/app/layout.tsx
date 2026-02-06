@@ -21,7 +21,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet" />
 
       </head>
-      <body className="font-body antialiased" suppressHydrationWarning>
+      <body className="font-mono antialiased" suppressHydrationWarning>
         {children}
         <Toaster />
       </body>
