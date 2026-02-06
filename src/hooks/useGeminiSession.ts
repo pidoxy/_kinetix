@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 
@@ -21,6 +21,10 @@ export function useGeminiSession() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [sessionSummary, setSessionSummary] = useState<any | null>(null);
     
+    const [greenCount, setGreenCount] = useState(0);
+    const [yellowCount, setYellowCount] = useState(0);
+    const [redCount, setRedCount] = useState(0);
+
     const ws = useRef<WebSocket | null>(null);
     const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -60,6 +64,9 @@ export function useGeminiSession() {
                         const status = message.data.toLowerCase();
                         if (status === 'green' || status === 'red' || status === 'yellow' || status === 'waiting') {
                             setLatestStatus(status as FormStatus);
+                            if (status === 'green') setGreenCount(c => c + 1);
+                            else if (status === 'yellow') setYellowCount(c => c + 1);
+                            else if (status === 'red') setRedCount(c => c + 1);
                         }
                     } else if (message.type === 'SPEECH_TEXT' && message.data) {
                         setLatestSpeechText(message.data);
@@ -198,8 +205,11 @@ export function useGeminiSession() {
         setError(null);
         setSessionSummary(null);
         setIsProcessing(false);
+        setGreenCount(0);
+        setYellowCount(0);
+        setRedCount(0);
         connect();
     };
 
-    return { isConnected, thoughtLogs, speechLogs, error, sendFrame, latestStatus, latestSpeechText, isProcessing, sessionSummary, endSession, resetSession, connect };
+    return { isConnected, thoughtLogs, speechLogs, error, sendFrame, latestStatus, latestSpeechText, isProcessing, sessionSummary, endSession, resetSession, connect, greenCount, yellowCount, redCount };
 }

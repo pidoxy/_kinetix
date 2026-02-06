@@ -47,6 +47,9 @@ export default function Dashboard() {
         sessionSummary,
         endSession,
         resetSession,
+        greenCount,
+        yellowCount,
+        redCount,
     } = useGeminiSession();
 
     useEffect(() => {
@@ -109,7 +112,7 @@ export default function Dashboard() {
                 
                 {sessionState === 'active' && (
                      <div className="w-full h-full flex">
-                        <ActiveMetricsSidebar status={latestStatus} />
+                        <ActiveMetricsSidebar greenCount={greenCount} yellowCount={yellowCount} redCount={redCount} />
                         <ActiveSession 
                             frameInterval={frameInterval}
                             facingMode={facingMode}
