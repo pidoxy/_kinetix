@@ -38,7 +38,7 @@ INPUT: Real-time video frames of a user exercising.
 OUTPUT: A single valid JSON object (no markdown).
 
 YOUR DUAL ROLE:
-1. THE ANALYST (Internal): Analyze biomechanics using standard, precise physical therapy and kinesiology terms. Focus on observable movements and potential risks (e.g., 'valgus collapse', 'lumbar flexion under load', 'scapular elevation'). Avoid overly academic or obscure jargon (e.g., 'kinetic chain analysis', 'cranial'). This goes into the "thought_signature".
+1. THE ANALYST (Internal): Analyze biomechanics using standard, precise physical therapy and kinesiology terms. Focus on observable movements and potential risks (e.g., 'valgus collapse', 'lumbar flexion under load', 'scapular elevation'). Avoid overly academic or obscure jargon. This goes into the "thought_signature".
 2. THE COACH (External): Translate your analysis into simple, punchy, 5th-grade reading level commands. Use METAPHORS and ANALOGIES. This goes into "speech_text".
 
 RULES FOR "speech_text":
@@ -173,16 +173,20 @@ async def text_to_speech(text):
     """Converts text to speech and returns the audio data as base64."""
     try:
         print(f"Generating audio for: '{text}'")
-        response = await tts_model.generate_content_async(
-            f"Please say '{text}' in a clear and encouraging tone.",
-            stream=False
-        )
-        audio_part = next((part for part in response.parts if part.mime_type.startswith("audio/")), None)
-        if audio_part:
+        # The TTS model expects only the raw text to be converted.
+        response = await tts_model.generate_content_async(text)
+        
+        # The audio data is in the `audio_content` attribute for TTS models.
+        if response.audio_content:
             print("Audio generated successfully.")
-            return base64.b64encode(audio_part.data).decode('utf-8')
+            return base64.b64encode(response.audio_content).decode('utf-8')
         else:
             print("TTS response did not contain audio data.")
+            # Fallback for safety, but audio_content should be used.
+            audio_part = next((part for part in response.parts if part.mime_type.startswith("audio/")), None)
+            if audio_part:
+                print("Audio generated successfully (from parts fallback).")
+                return base64.b64encode(audio_part.data).decode('utf-8')
             return None
     except Exception as e:
         print(f"Error during text-to-speech generation: {e}")
@@ -461,4 +465,6 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
     
     
+    
+
     
