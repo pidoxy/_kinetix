@@ -17,13 +17,13 @@ export function useGeminiSession() {
     const [speechLogs, setSpeechLogs] = useState<ThoughtLog[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [latestStatus, setLatestStatus] = useState<FormStatus>("idle");
-    const [latestSpeechText, setLatestSpeechText] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [sessionSummary, setSessionSummary] = useState<any | null>(null);
     
     const [greenCount, setGreenCount] = useState(0);
     const [yellowCount, setYellowCount] = useState(0);
     const [redCount, setRedCount] = useState(0);
+    const [isMuted, setIsMuted] = useState(false);
 
     const ws = useRef<WebSocket | null>(null);
     const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -69,7 +69,6 @@ export function useGeminiSession() {
                             else if (status === 'red') setRedCount(c => c + 1);
                         }
                     } else if (message.type === 'SPEECH_TEXT' && message.data) {
-                        setLatestSpeechText(message.data);
                         setSpeechLogs((prevLogs) => [...prevLogs, { timestamp: Date.now(), text: message.data }]);
                     } else if (message.type === 'SPEECH' && message.data) {
                         try {
@@ -146,7 +145,7 @@ export function useGeminiSession() {
 
 
     const playAudioFromQueue = useCallback(async () => {
-        if (isPlaying.current || audioQueue.current.length === 0 || !audioContext.current) {
+        if (isMuted || isPlaying.current || audioQueue.current.length === 0 || !audioContext.current) {
             return;
         }
 
@@ -177,7 +176,7 @@ export function useGeminiSession() {
         } else {
             isPlaying.current = false;
         }
-    }, []);
+    }, [isMuted]);
 
 
     const sendFrame = (base64Image: string) => {
@@ -201,7 +200,6 @@ export function useGeminiSession() {
         setThoughtLogs([]);
         setSpeechLogs([]);
         setLatestStatus('idle');
-        setLatestSpeechText(null);
         setError(null);
         setSessionSummary(null);
         setIsProcessing(false);
@@ -211,5 +209,5 @@ export function useGeminiSession() {
         connect();
     };
 
-    return { isConnected, thoughtLogs, speechLogs, error, sendFrame, latestStatus, latestSpeechText, isProcessing, sessionSummary, endSession, resetSession, connect, greenCount, yellowCount, redCount };
+    return { isConnected, thoughtLogs, speechLogs, error, sendFrame, latestStatus, isProcessing, sessionSummary, endSession, resetSession, connect, greenCount, yellowCount, redCount, isMuted, setIsMuted };
 }

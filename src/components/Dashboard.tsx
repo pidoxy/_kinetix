@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Settings, Video, User, Square, Pause, Mic, Heart } from 'lucide-react';
+import { Settings, Video, User, Square, Pause, Mic, MicOff, Heart } from 'lucide-react';
 import { useGeminiSession } from '@/hooks/useGeminiSession';
 import { KinetixLogo } from './k-logo';
 import { Timer } from './Timer';
@@ -42,7 +42,6 @@ export default function Dashboard() {
         error, 
         sendFrame, 
         latestStatus,
-        latestSpeechText,
         isProcessing, 
         sessionSummary,
         endSession,
@@ -50,6 +49,8 @@ export default function Dashboard() {
         greenCount,
         yellowCount,
         redCount,
+        isMuted,
+        setIsMuted,
     } = useGeminiSession();
 
     useEffect(() => {
@@ -82,6 +83,10 @@ export default function Dashboard() {
         setSessionState('idle');
         setSessionStartTime(null);
     };
+
+    const toggleMute = () => {
+        setIsMuted(prev => !prev);
+    }
 
     const isLive = sessionState === 'active' || sessionState === 'generating_summary';
 
@@ -143,7 +148,9 @@ export default function Dashboard() {
                         <Button onClick={handleStopSession} variant="destructive" className="font-bold px-6">
                             <Square className="mr-2"/> END SESSION
                         </Button>
-                        <Button size="icon" variant="outline"><Mic /></Button>
+                        <Button size="icon" variant="outline" onClick={toggleMute}>
+                           {isMuted ? <MicOff /> : <Mic />}
+                        </Button>
                     </div>
                      <div className="w-48"></div>
                 </footer>
