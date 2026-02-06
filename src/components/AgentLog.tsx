@@ -1,95 +1,74 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, Info, LucideAlertCircle, SlidersHorizontal } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { BookOpen, SlidersHorizontal } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ThoughtLog } from '@/hooks/useGeminiSession';
 import { cn } from '@/lib/utils';
-import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Separator } from './ui/separator';
 
 type AgentLogProps = {
-    logs: ThoughtLog[],
+    thoughtLogs: ThoughtLog[],
+    speechLogs: ThoughtLog[],
     error: string | null,
     isProcessing: boolean;
 };
 
-const LogIcon = ({ level }: { level: string }) => {
-    switch (level) {
-        case 'SYSTEM': return <SlidersHorizontal className="h-4 w-4 text-cyan-400" />;
-        case 'SUCCESS': return <CheckCircle className="h-4 w-4 text-green-400" />;
-        case 'INFO': return <Info className="h-4 w-4 text-sky-400" />;
-        case 'WARNING': return <AlertTriangle className="h-4 w-4 text-yellow-400" />;
-        case 'ALERT': return <LucideAlertCircle className="h-4 w-4 text-red-500" />;
-        default: return <Info className="h-4 w-4 text-sky-400" />;
-    }
-}
+type ViewMode = 'coach' | 'pro';
 
-const getLogLevel = (text: string): { level: string, message: string, action?: string } => {
-    text = text.toLowerCase();
-    if (text.includes("user's back is rounding") || text.includes('lumbar curvature') || text.includes('shear force')) {
-        return { level: 'ALERT', message: "User's back is rounding...", action: 'Engage core muscles and straighten spine immediately.' };
-    }
-    if (text.includes('valgus collapse')) {
-        return { level: 'WARNING', message: 'Knee valgus detected.' };
-    }
-    if (text.includes('kinematic alignment optimal')) {
-        return { level: 'SUCCESS', message: 'Calibration complete. Tracking active.' };
-    }
-     if (text.startsWith('connection established')) {
-        return { level: 'SYSTEM', message: 'Calibrating skeleton tracking...' };
-    }
-    if (text.includes('repetition')) {
-         return { level: 'INFO', message: text };
-    }
-    return { level: 'INFO', message: text };
-};
-
-
-export const AgentLog = ({ logs, error, isProcessing }: AgentLogProps) => {
+export const AgentLog = ({ thoughtLogs, speechLogs, error, isProcessing }: AgentLogProps) => {
+    const [viewMode, setViewMode] = useState<ViewMode>('coach');
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    const logsToDisplay = viewMode === 'coach' ? speechLogs : thoughtLogs;
 
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [logs]);
+    }, [thoughtLogs, speechLogs, viewMode]);
 
 
     return (
-        <div className="bg-card/80 backdrop-blur-sm h-full w-full max-w-md flex flex-col p-4">
+        <div className="bg-card/40 backdrop-blur-sm h-full w-full max-w-md flex flex-col p-4">
             <h2 className="text-sm font-semibold tracking-[0.2em] text-slate-400 mb-4">// AGENT LOG</h2>
-            <div ref={scrollRef} className="flex-grow overflow-y-auto pr-2 space-y-4 text-sm font-mono">
+
+            <div className="flex items-center justify-center gap-2 mb-4 bg-slate-900/50 p-1 rounded-md">
+                <Button
+                    size="sm"
+                    variant={viewMode === 'coach' ? 'secondary' : 'ghost'}
+                    className="flex-1"
+                    onClick={() => setViewMode('coach')}
+                >
+                    <BookOpen className="mr-2 h-4 w-4" /> Coach Log
+                </Button>
+                <Button
+                    size="sm"
+                    variant={viewMode === 'pro' ? 'secondary' : 'ghost'}
+                    className="flex-1"
+                    onClick={() => setViewMode('pro')}
+                >
+                    <SlidersHorizontal className="mr-2 h-4 w-4" /> Pro Log
+                </Button>
+            </div>
+            
+            <Separator className="mb-4 bg-white/10" />
+
+            <div ref={scrollRef} className="flex-grow overflow-y-auto pr-2 space-y-3 text-sm font-mono">
                 {error && (
                     <Alert variant="destructive">
                         <AlertTitle>Connection Error</AlertTitle>
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 )}
-                {logs.map((log) => {
-                    const { level, message, action } = getLogLevel(log.text);
-                    const isAlert = level === 'ALERT';
-
-                    return (
-                        <div key={log.timestamp} className={cn('flex items-start gap-3 text-slate-300', isAlert && 'p-3 bg-destructive/20 border border-destructive/50 rounded-md')}>
-                            <div className="flex items-center gap-2">
-                                <span className="text-slate-500 text-xs mt-0.5">[{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
-                                <LogIcon level={level} />
-                            </div>
-                            <div className="flex-1">
-                                <p className={cn(
-                                    level === 'SUCCESS' && 'text-green-400',
-                                    level === 'WARNING' && 'text-yellow-400',
-                                    level === 'ALERT' && 'text-red-400',
-                                    'font-medium'
-                                )}>
-                                    {message}
-                                </p>
-                                {action && <p className="text-slate-400 text-xs mt-1">Action: {action}</p>}
-                            </div>
-                        </div>
-                    )
-                })}
-                 {isProcessing && <div className="text-slate-500 animate-pulse pl-20">... analyzing</div>}
+                {logsToDisplay.map((log) => (
+                     <p key={log.timestamp} className="animate-fade-in break-words whitespace-pre-wrap opacity-80 hover:opacity-100 transition-opacity">
+                        <span className="text-cyan-400/50 mr-2">[{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
+                        <span className={cn(viewMode === 'pro' && 'text-green-400/90')}>{`> ${log.text}`}</span>
+                    </p>
+                ))}
+                 {isProcessing && logsToDisplay.length > 0 && <div className="text-slate-500 animate-pulse pl-24">... analyzing</div>}
             </div>
         </div>
     );

@@ -121,7 +121,7 @@ export default function Dashboard() {
                             latestStatus={latestStatus}
                             isProcessing={isProcessing}
                         />
-                        <AgentLog logs={thoughtLogs} error={error} isProcessing={isProcessing} />
+                        <AgentLog thoughtLogs={thoughtLogs} speechLogs={speechLogs} error={error} isProcessing={isProcessing} />
                     </div>
                 )}
             </main>
