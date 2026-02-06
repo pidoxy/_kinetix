@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Award, BarChart, Sparkles, Target, ThumbsUp, TrendingUp, CheckCircle, AlertTriangle, XCircle, Dumbbell } from 'lucide-react';
@@ -7,6 +8,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface SessionSummaryProps {
     summary: any;
@@ -38,10 +40,22 @@ export function SessionSummary({ summary, onClose }: SessionSummaryProps) {
     const { form_score, ai_summary, top_corrections, personalized_recommendations } = summary;
     const rating = form_score?.rating || 'NO_DATA';
     const config = ratingConfig[rating as keyof typeof ratingConfig];
+    const bgImage = PlaceHolderImages.find(img => img.id === 'webcam-background');
 
     return (
-        <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-slate-950/80 animate-fade-in p-4">
-            <Card className="max-w-4xl w-full bg-card/80 backdrop-blur-md border-primary/30 shadow-cyan-glow">
+        <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-slate-950 p-4 animate-fade-in">
+            {bgImage && (
+                 <Image
+                    src={bgImage.imageUrl}
+                    alt={bgImage.description}
+                    fill
+                    className="object-cover scale-105"
+                    data-ai-hint={bgImage.imageHint}
+                />
+            )}
+            <div className="absolute inset-0 bg-slate-950/70" />
+            
+            <Card className="max-w-4xl w-full bg-card/80 backdrop-blur-md border-primary/30 shadow-cyan-glow z-10">
                 <CardHeader>
                     <div className="flex justify-between items-start">
                         <div className="flex items-center gap-4">
