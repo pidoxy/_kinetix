@@ -1,8 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Play } from 'lucide-react';
-import { KinetixLogo } from '@/components/k-logo';
+import { Play, Activity } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export const IdleScreen = ({ onStart }: { onStart: () => void }) => {
@@ -22,10 +21,12 @@ export const IdleScreen = ({ onStart }: { onStart: () => void }) => {
             <div className="absolute inset-0 bg-slate-950/50" />
 
             <div className="relative flex flex-col items-center justify-center bg-card/60 backdrop-blur-md border border-primary/30 rounded-2xl shadow-cyan-glow p-8 md:p-12 max-w-lg text-center">
-                <KinetixLogo className="h-8 w-8 text-primary mb-4" />
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-100 mb-4">Ready for your session?</h1>
-                <p className="text-slate-300 mb-8 max-w-sm">
-                    Ensure your full body is visible in the frame and the lighting is clear.
+                <div className="p-3 bg-cyan-400/20 rounded-lg mb-4">
+                    <Activity className="h-12 w-12 text-cyan-400" />
+                </div>
+                <h1 className="text-4xl md:text-5xl font-bold tracking-widest text-slate-100 mb-2">KINETIX</h1>
+                <p className="text-lg text-slate-300 mb-8 max-w-sm">
+                   Your AI personal trainer for perfect form.
                 </p>
                 <Button
                     onClick={onStart}
