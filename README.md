@@ -29,7 +29,7 @@ Kinetix is built on a modern, decoupled architecture designed for real-time inte
 *   **Artificial Intelligence:** I use **Google's Gemini 1.5 Pro** model as the core engine for its advanced, native multimodal capabilities.
     *   **Multimodal Reasoning:** The model directly analyzes the stream of video frames sent from the client. There's no separate computer vision model; Gemini understands the movement natively.
     *   **Sophisticated Prompt Engineering:** The key to the AI is a sophisticated **system prompt** that enforces the "Analyst/Coach" translator strategy. I instruct the model to return a structured **JSON object** containing its high-level technical analysis (`thought_signature`) and the simple, user-facing cue (`speech_text`) in a single API call.
-    *   **Large Context Window:** At the end of a session, I send the entire history of analysis back to Gemini. Its large context window allows it to synthesize this data into a rich, personalized summary of the entire workout, identifying trends and key moments.
+    *   **Large Context Window:** At the end of a session, I send the entire history of analysis back to Gemini.Its large context window allows it to synthesize this data into a rich, personalized summary of the entire workout, identifying trends and key moments.
     *   **Text-to-Speech:** The `speech_text` is converted into audio using Gemini's integrated **TTS model**, providing essential hands-free feedback.
 
 ## Challenges I ran into
@@ -58,3 +58,64 @@ I'm just getting started! The current version is a powerful proof-of-concept, an
 *   **Long-Term Progress Tracking:** I want to store session data to allow users to track their performance over time, view progress charts, and see their form improving week by week.
 *   **Gamification:** To keep users motivated, I will introduce achievements, streaks, and personal bests, turning the pursuit of perfect form into a fun and rewarding game.
 *   **Guided Workouts:** I envision a future where Kinetix can guide users through entire, pre-planned workout routines, providing a start-to-finish coaching experience.
+
+## Testing Instructions
+
+To test Kinetix AI, you'll need to run both the frontend (Next.js) and the backend (Python/FastAPI) simultaneously.
+
+### 1. Prerequisites
+
+*   Node.js and npm installed.
+*   Python 3.7+ and pip installed.
+*   A Google Gemini API Key.
+
+### 2. Backend Setup
+
+1.  Navigate to the project's root directory.
+2.  Create a `.env` file in the root directory.
+3.  Add your Gemini API key to the `.env` file:
+    ```
+    GEMINI_API_KEY="YOUR_API_KEY_HERE"
+    ```
+4.  Install the required Python packages:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+### 3. Frontend Setup
+
+1.  In a new terminal, navigate to the project's root directory.
+2.  Install the npm dependencies:
+    ```bash
+    npm install
+    ```
+
+### 4. Running the Application
+
+1.  **Start the Backend Server:** In your first terminal, run the following command to start the Python server:
+    ```bash
+    uvicorn main:app --reload --port 8080
+    ```
+    The backend will be running at `http://localhost:8080`.
+
+2.  **Start the Frontend Server:** In your second terminal, run the following command to start the Next.js development server:
+    ```bash
+    npm run dev
+    ```
+    The frontend will be running at `http://localhost:9002`.
+
+### 5. How to Test
+
+1.  Open your web browser and navigate to `http://localhost:9002`.
+2.  Click the **"START SESSION"** button on the main screen.
+3.  Your browser will ask for permission to use your webcam. **Allow access.**
+4.  Position yourself so that your full body is visible to the camera.
+5.  Perform an exercise, such as a bodyweight squat.
+6.  Observe the real-time feedback:
+    *   The skeleton overlay will change color (`GREEN`, `YELLOW`, `RED`).
+    *   The "Coach Log" will display simple instructions.
+    *   You will hear audio cues for the instructions.
+    *   The "Pro Log" will show the AI's technical analysis.
+7.  When you are finished, click the **"END SESSION"** button.
+8.  Wait for the AI to generate your summary.
+9.  Review your performance breakdown on the **Session Summary** screen.
