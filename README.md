@@ -61,15 +61,30 @@ I'm just getting started! The current version is a powerful proof-of-concept, an
 
 ## Testing Instructions
 
-To test Kinetix AI, you'll need to run both the frontend (Next.js) and the backend (Python/FastAPI) simultaneously.
+### Option 1: Live Demo (Recommended)
 
-### 1. Prerequisites
+The easiest way to test Kinetix AI is to use the live-hosted version. The backend and frontend are already running and connected.
+
+1.  **Open the Live Link:**
+    Navigate to the following URL in your browser (Chrome recommended):
+    [https://6000-firebase-studio-1767630361889.cluster-ikslh4rdsnbqsvu5nw3v4dqjj2.cloudworkstations.dev/](https://6000-firebase-studio-1767630361889.cluster-ikslh4rdsnbqsvu5nw3v4dqjj2.cloudworkstations.dev/)
+
+2.  **Start Your Session:**
+    *   Click the **"START SESSION"** button.
+    *   Your browser will ask for permission to use your webcam. **Please allow access.**
+    *   Position yourself so your full body is visible and begin your exercise.
+
+### Option 2: Running Locally
+
+If you prefer to run the project on your local machine, you will need to run both the frontend (Next.js) and the backend (Python/FastAPI) simultaneously.
+
+#### 1. Prerequisites
 
 *   Node.js and npm installed.
 *   Python 3.7+ and pip installed.
 *   A Google Gemini API Key.
 
-### 2. Backend Setup
+#### 2. Backend Setup
 
 1.  Navigate to the project's root directory.
 2.  Create a `.env` file in the root directory.
@@ -82,7 +97,7 @@ To test Kinetix AI, you'll need to run both the frontend (Next.js) and the backe
     pip install -r requirements.txt
     ```
 
-### 3. Frontend Setup
+#### 3. Frontend Setup
 
 1.  In a new terminal, navigate to the project's root directory.
 2.  Install the npm dependencies:
@@ -90,7 +105,7 @@ To test Kinetix AI, you'll need to run both the frontend (Next.js) and the backe
     npm install
     ```
 
-### 4. Running the Application
+#### 4. Running the Application
 
 1.  **Start the Backend Server:** In your first terminal, run the following command to start the Python server:
     ```bash
@@ -104,18 +119,12 @@ To test Kinetix AI, you'll need to run both the frontend (Next.js) and the backe
     ```
     The frontend will be running at `http://localhost:9002`.
 
-### 5. How to Test
+#### 5. How to Use
 
 1.  Open your web browser and navigate to `http://localhost:9002`.
 2.  Click the **"START SESSION"** button on the main screen.
-3.  Your browser will ask for permission to use your webcam. **Allow access.**
+3.  Allow webcam access.
 4.  Position yourself so that your full body is visible to the camera.
 5.  Perform an exercise, such as a bodyweight squat.
-6.  Observe the real-time feedback:
-    *   The skeleton overlay will change color (`GREEN`, `YELLOW`, `RED`).
-    *   The "Coach Log" will display simple instructions.
-    *   You will hear audio cues for the instructions.
-    *   The "Pro Log" will show the AI's technical analysis.
-7.  When you are finished, click the **"END SESSION"** button.
-8.  Wait for the AI to generate your summary.
-9.  Review your performance breakdown on the **Session Summary** screen.
+6.  Observe the real-time feedback.
+7.  When you are finished, click the **"END SESSION"** button to view your summary.
